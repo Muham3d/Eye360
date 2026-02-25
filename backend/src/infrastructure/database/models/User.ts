@@ -86,7 +86,6 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
           notEmpty: {
             msg: 'Email cannot be empty',
           },
-          normalizeEmail: true,
         },
         comment: 'Unique email address for login',
       },

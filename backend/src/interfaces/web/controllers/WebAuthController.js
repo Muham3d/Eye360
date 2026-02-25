@@ -96,6 +96,9 @@ export class WebAuthController {
         if (maxAge && req.session.cookie) {
           req.session.cookie.maxAge = maxAge;
         }
+
+        // Save session explicitly before redirect
+        await req.session.save();
       }
 
       // Redirect to original URL or dashboard

@@ -66,7 +66,8 @@ function getEnvNumberOrDefault(key: string, defaultValue: number): number {
  * SQLite database file path
  */
 function getSQLitePath(): string {
-  const dbDir = path.resolve(__dirname, '../../data');
+  // Use process.cwd() to get the project root regardless of where the file is located
+  const dbDir = path.resolve(process.cwd(), 'data');
   return path.join(dbDir, 'patrolmanager.sqlite');
 }
 

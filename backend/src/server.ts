@@ -144,8 +144,8 @@ async function startServer(): Promise<http.Server> {
     audience: config.jwt.audience,
   });
   const passwordService = initializePasswordService();
-  const sessionService = initializeSessionService();
   const userRepository = new SequelizeUserRepository();
+  const sessionService = initializeSessionService(userRepository);
   initializeAuthService(userRepository, jwtService, passwordService, sessionService);
 
   // Initialize Session Middleware (for web login)
