@@ -1,0 +1,111 @@
+485933fe08c00af9b4e1ff81d6b4845e
+"use strict";
+/**
+ * Mock Helper Utilities
+ *
+ * Provides utilities for creating mocks in tests.
+ * Compatible with Jest 29.x type definitions.
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.clearAllMocks = clearAllMocks;
+exports.createSpy = createSpy;
+exports.createResolvedSpy = createResolvedSpy;
+exports.createRejectedSpy = createRejectedSpy;
+exports.mockClass = mockClass;
+exports.spyOnMethod = spyOnMethod;
+exports.createSequentialMock = createSequentialMock;
+exports.resetModules = resetModules;
+exports.reloadModule = reloadModule;
+/**
+ * Clear all mocks including timers, modules, and fn mocks
+ */
+function clearAllMocks() {
+    jest.clearAllTimers();
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+}
+/**
+ * Create a mock function with spy capabilities
+ */
+function createSpy(implementation) {
+    return implementation ? jest.fn(implementation) : jest.fn();
+}
+/**
+ * Create a mock async function that resolves with a value
+ */
+function createResolvedSpy(value) {
+    return jest.fn().mockResolvedValue(value);
+}
+/**
+ * Create a mock async function that rejects with an error
+ */
+function createRejectedSpy(error) {
+    return jest.fn().mockRejectedValue(error);
+}
+/**
+ * Create a mock for a class
+ */
+function mockClass(_constructor) {
+    return jest.fn();
+}
+/**
+ * Spy on a method of an object
+ */
+function spyOnMethod(obj, method) {
+    return jest.spyOn(obj, method);
+}
+/**
+ * Create a mock that returns different values on consecutive calls
+ */
+function createSequentialMock(values) {
+    const mock = jest.fn();
+    values.forEach((value) => mock.mockReturnValueOnce(value));
+    return mock;
+}
+/**
+ * Reset all module mocks
+ */
+function resetModules() {
+    jest.resetModules();
+}
+/**
+ * Reload a module (useful for testing with different configurations)
+ */
+async function reloadModule(modulePath) {
+    resetModules();
+    return await Promise.resolve(`${modulePath}`).then(s => __importStar(require(s)));
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXFVzZXJzXFxNb2hhbWVkXFxEZXNrdG9wXFxQcm9qZWN0c1xcUGF0cm9sTWFuYWdlclxcYmFja2VuZFxcdGVzdHNcXHV0aWxzXFxtb2NrLmhlbHBlcnMudHMiLCJtYXBwaW5ncyI6IjtBQUFBOzs7OztHQUtHOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7OztBQUtILHNDQUlDO0FBS0QsOEJBSUM7QUFLRCw4Q0FFQztBQUtELDhDQUVDO0FBS0QsOEJBSUM7QUFLRCxrQ0FLQztBQUtELG9EQUlDO0FBS0Qsb0NBRUM7QUFLRCxvQ0FHQztBQXpFRDs7R0FFRztBQUNILFNBQWdCLGFBQWE7SUFDM0IsSUFBSSxDQUFDLGNBQWMsRUFBRSxDQUFDO0lBQ3RCLElBQUksQ0FBQyxhQUFhLEVBQUUsQ0FBQztJQUNyQixJQUFJLENBQUMsZUFBZSxFQUFFLENBQUM7QUFDekIsQ0FBQztBQUVEOztHQUVHO0FBQ0gsU0FBZ0IsU0FBUyxDQUN2QixjQUFrQjtJQUVsQixPQUFPLGNBQWMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLEVBQUUsQ0FBQyxjQUFjLENBQUMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLEVBQUUsRUFBRSxDQUFDO0FBQzlELENBQUM7QUFFRDs7R0FFRztBQUNILFNBQWdCLGlCQUFpQixDQUFJLEtBQVE7SUFDM0MsT0FBTyxJQUFJLENBQUMsRUFBRSxFQUFFLENBQUMsaUJBQWlCLENBQUMsS0FBSyxDQUFDLENBQUM7QUFDNUMsQ0FBQztBQUVEOztHQUVHO0FBQ0gsU0FBZ0IsaUJBQWlCLENBQUMsS0FBWTtJQUM1QyxPQUFPLElBQUksQ0FBQyxFQUFFLEVBQUUsQ0FBQyxpQkFBaUIsQ0FBQyxLQUFLLENBQUMsQ0FBQztBQUM1QyxDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixTQUFTLENBQ3ZCLFlBQWU7SUFFZixPQUFPLElBQUksQ0FBQyxFQUFFLEVBQVMsQ0FBQztBQUMxQixDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixXQUFXLENBQ3pCLEdBQU0sRUFDTixNQUFTO0lBRVQsT0FBTyxJQUFJLENBQUMsS0FBSyxDQUFDLEdBQUcsRUFBRSxNQUFhLENBQUMsQ0FBQztBQUN4QyxDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixvQkFBb0IsQ0FBSSxNQUFXO0lBQ2pELE1BQU0sSUFBSSxHQUFHLElBQUksQ0FBQyxFQUFFLEVBQUUsQ0FBQztJQUN2QixNQUFNLENBQUMsT0FBTyxDQUFDLENBQUMsS0FBSyxFQUFFLEVBQUUsQ0FBQyxJQUFJLENBQUMsbUJBQW1CLENBQUMsS0FBSyxDQUFDLENBQUMsQ0FBQztJQUMzRCxPQUFPLElBQUksQ0FBQztBQUNkLENBQUM7QUFFRDs7R0FFRztBQUNILFNBQWdCLFlBQVk7SUFDMUIsSUFBSSxDQUFDLFlBQVksRUFBRSxDQUFDO0FBQ3RCLENBQUM7QUFFRDs7R0FFRztBQUNJLEtBQUssVUFBVSxZQUFZLENBQUMsVUFBa0I7SUFDbkQsWUFBWSxFQUFFLENBQUM7SUFDZixPQUFPLHlCQUFhLFVBQVUsdUNBQUMsQ0FBQztBQUNsQyxDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcTW9oYW1lZFxcRGVza3RvcFxcUHJvamVjdHNcXFBhdHJvbE1hbmFnZXJcXGJhY2tlbmRcXHRlc3RzXFx1dGlsc1xcbW9jay5oZWxwZXJzLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxuICogTW9jayBIZWxwZXIgVXRpbGl0aWVzXG4gKlxuICogUHJvdmlkZXMgdXRpbGl0aWVzIGZvciBjcmVhdGluZyBtb2NrcyBpbiB0ZXN0cy5cbiAqIENvbXBhdGlibGUgd2l0aCBKZXN0IDI5LnggdHlwZSBkZWZpbml0aW9ucy5cbiAqL1xuXG4vKipcbiAqIENsZWFyIGFsbCBtb2NrcyBpbmNsdWRpbmcgdGltZXJzLCBtb2R1bGVzLCBhbmQgZm4gbW9ja3NcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGNsZWFyQWxsTW9ja3MoKTogdm9pZCB7XG4gIGplc3QuY2xlYXJBbGxUaW1lcnMoKTtcbiAgamVzdC5jbGVhckFsbE1vY2tzKCk7XG4gIGplc3QucmVzdG9yZUFsbE1vY2tzKCk7XG59XG5cbi8qKlxuICogQ3JlYXRlIGEgbW9jayBmdW5jdGlvbiB3aXRoIHNweSBjYXBhYmlsaXRpZXNcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGNyZWF0ZVNweTxUIGV4dGVuZHMgKC4uLmFyZ3M6IGFueVtdKSA9PiBhbnk+KFxuICBpbXBsZW1lbnRhdGlvbj86IFRcbik6IGplc3QuTW9jayB7XG4gIHJldHVybiBpbXBsZW1lbnRhdGlvbiA/IGplc3QuZm4oaW1wbGVtZW50YXRpb24pIDogamVzdC5mbigpO1xufVxuXG4vKipcbiAqIENyZWF0ZSBhIG1vY2sgYXN5bmMgZnVuY3Rpb24gdGhhdCByZXNvbHZlcyB3aXRoIGEgdmFsdWVcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGNyZWF0ZVJlc29sdmVkU3B5PFQ+KHZhbHVlOiBUKTogamVzdC5Nb2NrIHtcbiAgcmV0dXJuIGplc3QuZm4oKS5tb2NrUmVzb2x2ZWRWYWx1ZSh2YWx1ZSk7XG59XG5cbi8qKlxuICogQ3JlYXRlIGEgbW9jayBhc3luYyBmdW5jdGlvbiB0aGF0IHJlamVjdHMgd2l0aCBhbiBlcnJvclxuICovXG5leHBvcnQgZnVuY3Rpb24gY3JlYXRlUmVqZWN0ZWRTcHkoZXJyb3I6IEVycm9yKTogamVzdC5Nb2NrIHtcbiAgcmV0dXJuIGplc3QuZm4oKS5tb2NrUmVqZWN0ZWRWYWx1ZShlcnJvcik7XG59XG5cbi8qKlxuICogQ3JlYXRlIGEgbW9jayBmb3IgYSBjbGFzc1xuICovXG5leHBvcnQgZnVuY3Rpb24gbW9ja0NsYXNzPFQgZXh0ZW5kcyBuZXcgKC4uLmFyZ3M6IGFueVtdKSA9PiBhbnk+KFxuICBfY29uc3RydWN0b3I6IFRcbik6IGplc3QuTW9ja2VkQ2xhc3M8VD4ge1xuICByZXR1cm4gamVzdC5mbigpIGFzIGFueTtcbn1cblxuLyoqXG4gKiBTcHkgb24gYSBtZXRob2Qgb2YgYW4gb2JqZWN0XG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBzcHlPbk1ldGhvZDxUIGV4dGVuZHMgb2JqZWN0LCBLIGV4dGVuZHMga2V5b2YgVD4oXG4gIG9iajogVCxcbiAgbWV0aG9kOiBLXG4pOiBqZXN0LlNweUluc3RhbmNlIHtcbiAgcmV0dXJuIGplc3Quc3B5T24ob2JqLCBtZXRob2QgYXMgYW55KTtcbn1cblxuLyoqXG4gKiBDcmVhdGUgYSBtb2NrIHRoYXQgcmV0dXJucyBkaWZmZXJlbnQgdmFsdWVzIG9uIGNvbnNlY3V0aXZlIGNhbGxzXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBjcmVhdGVTZXF1ZW50aWFsTW9jazxUPih2YWx1ZXM6IFRbXSk6IGplc3QuTW9jayB7XG4gIGNvbnN0IG1vY2sgPSBqZXN0LmZuKCk7XG4gIHZhbHVlcy5mb3JFYWNoKCh2YWx1ZSkgPT4gbW9jay5tb2NrUmV0dXJuVmFsdWVPbmNlKHZhbHVlKSk7XG4gIHJldHVybiBtb2NrO1xufVxuXG4vKipcbiAqIFJlc2V0IGFsbCBtb2R1bGUgbW9ja3NcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIHJlc2V0TW9kdWxlcygpOiB2b2lkIHtcbiAgamVzdC5yZXNldE1vZHVsZXMoKTtcbn1cblxuLyoqXG4gKiBSZWxvYWQgYSBtb2R1bGUgKHVzZWZ1bCBmb3IgdGVzdGluZyB3aXRoIGRpZmZlcmVudCBjb25maWd1cmF0aW9ucylcbiAqL1xuZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIHJlbG9hZE1vZHVsZShtb2R1bGVQYXRoOiBzdHJpbmcpOiBQcm9taXNlPGFueT4ge1xuICByZXNldE1vZHVsZXMoKTtcbiAgcmV0dXJuIGF3YWl0IGltcG9ydChtb2R1bGVQYXRoKTtcbn1cbiJdLCJ2ZXJzaW9uIjozfQ==

@@ -1,0 +1,110 @@
+{
+  "dashboard": {
+    "title": "PatrolManager API Dashboard",
+    "tags": ["patrolmanager", "api", "backend"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (req/s)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_http_requests_total[1m])",
+            "legendFormat": "{{method}} {{route}} ({{status_code}})"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Request Latency (p95)",
+        "type": "graph",
+        "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(patrolmanager_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{route}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate (%)",
+        "type": "graph",
+        "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(patrolmanager_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(patrolmanager_http_requests_total[5m])) * 100",
+            "legendFormat": "5xx Errors"
+          },
+          {
+            "expr": "sum(rate(patrolmanager_http_requests_total{status_code=~\"4..\"}[5m])) / sum(rate(patrolmanager_http_requests_total[5m])) * 100",
+            "legendFormat": "4xx Errors"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Response Status Codes",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "sum by (status_code) (increase(patrolmanager_http_requests_total[1h]))",
+            "legendFormat": "{{status_code}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "gauge",
+        "gridPos": { "x": 6, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "patrolmanager_http_active_connections",
+            "legendFormat": "Active"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Total Requests (1h)",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "sum(increase(patrolmanager_http_requests_total[1h]))",
+            "legendFormat": "Requests"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Memory (MB)"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[1m]) * 100",
+            "legendFormat": "CPU %"
+          }
+        ]
+      }
+    ]
+  }
+}

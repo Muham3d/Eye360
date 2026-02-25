@@ -1,0 +1,86 @@
+<%- include('../layouts/main-header') %>
+
+<div class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Incident Reports</h1>
+        <div class="flex space-x-2">
+            <button class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">Export CSV</button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-wrap gap-4 items-center">
+        <select class="border rounded-lg px-3 py-2 text-sm">
+            <option value="">All Types</option>
+            <option value="security">Security</option>
+            <option value="safety">Safety</option>
+            <option value="maintenance">Maintenance</option>
+        </select>
+        <select class="border rounded-lg px-3 py-2 text-sm">
+            <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+        </select>
+        <select class="border rounded-lg px-3 py-2 text-sm">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="investigating">Investigating</option>
+            <option value="resolved">Resolved</option>
+        </select>
+        <input type="text" placeholder="Search incidents..." class="border rounded-lg px-3 py-2 text-sm flex-1">
+    </div>
+
+    <!-- Incident Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Incident</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Site</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Reporter</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Priority</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <% if (incidents && incidents.length > 0) { %>
+                    <% incidents.forEach(incident => { %>
+                        <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/incidents/<%= incident.id %>'">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900"><%= incident.title %></div>
+                                <div class="text-xs text-gray-500"><%= incident.type %></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600"><%= incident.site?.name || 'Unknown' %></td>
+                            <td class="px-6 py-4 text-sm text-gray-600"><%= incident.reporter?.firstName %> <%= incident.reporter?.lastName %></td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded-full text-xs font-bold uppercase 
+                                    <%= incident.priority === 'critical' ? 'bg-red-100 text-red-700' : 
+                                        incident.priority === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700' %>">
+                                    <%= incident.priority %>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm font-medium"><%= incident.status %></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <%= new Date(incident.createdAt).toLocaleString() %>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <a href="/incidents/<%= incident.id %>" class="text-primary-600 hover:text-primary-900 text-sm font-medium">View Details</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="7" class="px-6 py-10 text-center text-gray-500">No incidents found matching filters.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../layouts/main-footer') %>

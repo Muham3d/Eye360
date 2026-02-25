@@ -1,0 +1,123 @@
+<%
+/**
+ * Change Role Modal
+ *
+ * Modal for changing a user's role
+ *
+ * @param {Object} user - User object
+ * @param {Array} roles - Available roles
+ */
+%>
+
+<div class="modal-overlay" id="change-role-modal" role="dialog" aria-modal="true" aria-labelledby="change-role-title">
+  <form method="POST" action="/users/<%= user.id %>/role" class="modal-container">
+    <div class="modal-header">
+      <h3 id="change-role-title" class="modal-title">Change User Role</h3>
+      <button type="button" class="p-2 text-secondary-500 hover:text-secondary-700 rounded-lg transition-colors" onclick="closeModal('change-role-modal')" aria-label="Close modal">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- User Info -->
+      <div class="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg mb-4">
+        <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <span class="text-lg font-semibold text-primary-600">
+            <%= (user.firstName || user.email)[0].toUpperCase() %>
+          </span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-secondary-900 truncate">
+            <%= user.firstName ? user.firstName + ' ' + user.lastName : user.email %>
+          </p>
+          <p class="text-sm text-secondary-500 truncate"><%= user.email %></p>
+        </div>
+      </div>
+
+      <!-- Current Role -->
+      <div class="flex items-center justify-between p-3 bg-primary-50 border border-primary-200 rounded-lg mb-4">
+        <span class="text-sm font-medium text-primary-900">Current Role:</span>
+        <% const roleColors = {
+          admin: 'bg-primary-100 text-primary-800',
+          manager: 'bg-purple-100 text-purple-800',
+          supervisor: 'bg-warning-100 text-warning-800',
+          guard: 'bg-secondary-100 text-secondary-800'
+        }; %>
+        <span class="badge <%= roleColors[user.roleName?.toLowerCase()] || roleColors.guard %>">
+          <%= user.roleName?.charAt(0).toUpperCase() + user.roleName?.slice(1) || 'Guard' %>
+        </span>
+      </div>
+
+      <!-- Role Selection -->
+      <div class="space-y-3">
+        <label for="new-role" class="input-label">Select New Role</label>
+        <select id="new-role" name="role" class="input" required aria-describedby="role-warning">
+          <option value="">Select a role...</option>
+          <% (roles || []).forEach(role => { %>
+            <option value="<%= role.name %>" <%= user.roleId === role.id ? 'selected' : '' %>>
+              <%= role.name.charAt(0).toUpperCase() + role.name.slice(1) %>
+            </option>
+          <% }); %>
+        </select>
+
+        <p id="role-warning" class="flex items-start gap-2 text-sm text-warning-700 bg-warning-50 border border-warning-200 rounded-lg p-3">
+          <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <span>Changing the user's role will immediately update their permissions and access level throughout the system.</span>
+        </p>
+      </div>
+
+      <!-- Role Descriptions -->
+      <div class="mt-4 p-4 bg-secondary-50 rounded-lg">
+        <p class="text-xs font-medium text-secondary-700 mb-3">Role Permissions:</p>
+        <div class="space-y-2">
+          <div class="flex items-start gap-3">
+            <span class="badge badge-primary flex-shrink-0">Admin</span>
+            <span class="text-sm text-secondary-600">Full system access including user management, settings, and all operations</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="badge bg-purple-100 text-purple-800 flex-shrink-0">Manager</span>
+            <span class="text-sm text-secondary-600">Site and guard management, reports, and operational oversight</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="badge badge-warning flex-shrink-0">Supervisor</span>
+            <span class="text-sm text-secondary-600">Patrol supervision, incident management, and team coordination</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="badge badge-secondary flex-shrink-0">Guard</span>
+            <span class="text-sm text-secondary-600">Basic access for patrols, checkpoints, and personal reports</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('change-role-modal')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Change Role</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  // Close on escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeModal('change-role-modal');
+    }
+  });
+
+  // Close on backdrop click
+  document.getElementById('change-role-modal').addEventListener('click', function(event) {
+    if (event.target === this) {
+      closeModal('change-role-modal');
+    }
+  });
+</script>

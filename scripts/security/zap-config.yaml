@@ -1,0 +1,351 @@
+###############################################################################
+# OWASP ZAP Configuration for PatrolManager Security Scans
+#
+# This configuration file defines settings for automated ZAP baseline scans
+# of the PatrolManager backend API and admin panel.
+#
+# Documentation: https://www.zaproxy.org/docs/docker/
+###############################################################################
+
+# ZAP API Configuration
+api:
+  # Disable API key for local scans (enable for production)
+  disablekey: true
+  # API key (required when disablekey is false)
+  key: ""
+  # API address
+  address: "0.0.0.0"
+  # API port
+  port: 8080
+
+# Spider Configuration
+spider:
+  # Start point for spidering
+  start:
+    - "http://localhost:3000"
+    - "http://localhost:3000/api"
+  # Maximum depth to spider
+  maxDepth: 5
+  # Maximum duration in minutes
+  maxDuration: 10
+  # Maximum pages to spider
+  maxPages: 100
+  # Parse web comments
+  parseComments: true
+  # Parse robots.txt
+  parseRobotsTxt: true
+  # Process forms
+  processForms: true
+  # Post form (true) or get form (false)
+  postForm: true
+
+# Ajax Spider Configuration
+ajaxSpider:
+  enabled: false
+  maxDuration: 10
+  maxCrawlDepth: 10
+  numberofBrowsers: 1
+
+# Active Scan Configuration
+pscans:
+  # Passive scan rules to enable
+  rules:
+    - id: 10021  # X-Content-Type-Options
+    - id: 10020  # X-Frame-Options
+    - id: 10023  # Server Leaks Information
+    - id: 10024  # Strict-Transport-Security
+    - id: 10017  # Cross-Domain JavaScript Source File Inclusion
+    - id: 10019  # Information Leakage
+    - id: 10027  # Charset Mismatch
+    - id: 10028  # X-AspNet-Version Response Header
+    - id: 10029  # X-Debug-Token Information Leak
+    - id: 10030  # Permissions Policy Header Not Set
+    - id: 10031  # X-Powered-By Header
+    - id: 10032  # Cache-Control Header
+    - id: 10033  # Content-Type Header Missing
+    - id: 10038  # CSP (Content Security Policy)
+    - id: 10039  # Anti-clickjacking Header
+    - id: 10041  # HTTP Only
+    - id: 10044  # Unsafe Cross-Origin Redirect
+    - id: 10045  # Clear Text Password in Request
+    - id: 10050  # Weak Authentication Method
+    - id: 10052  # Cookies Without SameSite Attribute
+    - id: 10054  # Insecure JSF ViewState
+    - id: 10055  # HTTP Parameter Pollution
+    - id: 10056  # User Agent Fuzzer
+    - id: 10057  # Info Exposed Through URL
+    - id: 10058  # Session ID in URL Rewrite
+    - id: 10061  # SQL Injection
+    - id: 10062  # No Secure Cookies
+    - id: 10063  # XML External Entity (XXE)
+    - id: 10064  # X-Debug-Token
+    - id: 10065  # Re-examine Cache-control
+    - id: 10066  # Directory Browsing
+    - id: 10067  # Heartbleed OpenSSL Vulnerability
+    - id: 10068  # Application Error Disclosure
+    - id: 10069  # Source Code Disclosure
+    - id: 10070  # Server Side Request Forgery (SSRF)
+    - id: 10071  # Remote Code Execution (RCE)
+    - id: 10072  # Server Header Information Leak
+    - id: 10073  # Reverse Proxy Configuration Error
+    - id: 10074  # Login Pages Using HTTP (Without HTTPS)
+    - id: 10075  # Logout Page Not Available
+    - id: 10076  # Subresource Integrity Attribute Missing
+    - id: 10077  # Modern Web Application
+    - id: 10078  # Charset Detection
+    - id: 10079  # Information Disclosure in URI
+    - id: 10080  # No Privacy Policy
+    - id: 10081  # Cookie Without Secure Flag
+    - id: 10082  # Multiple Security Headers
+    - id: 10083  # Cross Domain Misconfiguration
+    - id: 10084  # Dangerous JS Functions
+    - id: 10085  # React Developer Tools
+    - id: 10086  # Viewstate Leaks Information
+    - id: 10087  # Dynamic Content
+    - id: 10088  # Insufficient Site Isolation Against Spectre Vulnerability
+    - id: 10089  # Fetch Metadata
+    - id: 10090  # Potentially Unsafe Resource
+    - id: 10091  # Cookie Loophole
+    - id: 10092  # XPath Injection
+    - id: 10093  # User Controllable Charset
+    - id: 10094  # User Controllable HTML Element Attribute
+    - id: 10095  # User Controllable JavaScript Event
+    - id: 10096  # User Controllable Redirect
+    - id: 10097  # Cross Site Scripting (Reflected)
+    - id: 10098  # Cross Site Scripting (Persistent)
+    - id: 10099  # Cross Site Scripting (DOM Based)
+    - id: 10101  # Auth Token in URL
+    - id: 10102  # File Upload
+    - id: 10103  # Retrived from Cache
+    - id: 10104  # Server Side Template Injection
+    - id: 10105  # CORS Misconfiguration
+    - id: 10106  # JSON Binding
+    - id: 10107  # XML External Entity (XXE) via File Upload
+    - id: 10108  # External Redirect
+    - id: 10109  # LDAP Injection
+    - id: 10110  # Content Type Scanner
+    - id: 10111  # Insufficient Authentication
+    - id: 10115  # Obsolete Security Headers
+    - id: 10116  # Open Redirect
+    - id: 10117  # Crawl Conditions
+    - id: 10118  # Suspicious Input Translation
+
+# Active Scan Configuration
+ascan:
+  # Default policy
+  policy:
+    name: "PatrolManager Default Policy"
+    alertThreshold: "Medium"
+    strength: "Medium"
+
+  # Attack strength per plugin
+  attackStrength:
+    default: "Medium"
+    # Higher strength for critical plugins
+    SQLInjection: "High"
+    XSS: "High"
+    XXE: "High"
+    RCE: "High"
+
+  # Alert threshold per plugin
+  alertThreshold:
+    default: "Medium"
+
+  # Delay in milliseconds between requests (to avoid overwhelming the server)
+  delayInMs: 100
+
+  # Maximum number of threads
+  maxThread: 5
+
+  # Add query parameters
+  addQueryParam: false
+
+  # Handle anti-CSRF tokens
+  antiCSRF:
+    enabled: true
+    tokenName: "_csrf"
+
+# Authentication Configuration
+authentication:
+  # For API testing, use JWT
+  type: "json"
+  # Login URL
+  loginUrl: "http://localhost:3000/api/auth/login"
+  # Login request body
+  loginRequestBody: "email=test@example.com&password=TestPass123"
+  # Logged in indicator
+  loggedInIndicator: "\"token\":"
+  # Logged out indicator
+  loggedOutIndicator: "\"error\":"
+
+# Session Management
+session:
+  type: "cookieBased"
+  sessionName: "connect.sid"
+
+# Users for testing (role-based access control)
+users:
+  - id: "admin"
+    name: "Admin User"
+    credentials:
+      email: "admin@patrolmanager.com"
+      password: "Admin123"
+    roles: ["Admin"]
+  - id: "manager"
+    name: "Manager User"
+    credentials:
+      email: "manager@patrolmanager.com"
+      password: "Manager123"
+    roles: ["Manager"]
+  - id: "supervisor"
+    name: "Supervisor User"
+    credentials:
+      email: "supervisor@patrolmanager.com"
+      password: "Supervisor123"
+    roles: ["Supervisor"]
+  - id: "guard"
+    name: "Guard User"
+    credentials:
+      email: "guard@patrolmanager.com"
+      password: "Guard123"
+    roles: ["Guard"]
+
+# Authorization (enforce RBAC)
+authorization:
+  detection:
+    # Detect unauthorized access by checking response codes
+    type: "statusCode"
+    statusCode: 401, 403
+
+# Context Configuration
+contexts:
+  - name: "PatrolManager API"
+    urls:
+      include: ["http://localhost:3000/api/.*"]
+      exclude: ["http://localhost:3000/api/auth/logout", "http://localhost:3000/api/auth/logout-all"]
+
+    # Authentication
+    authentication:
+      type: "json"
+      loginUrl: "http://localhost:3000/api/auth/login"
+      loginRequestBody: 'email={%username%}&password={%password%}'
+
+    # Session Management
+    sessionManagement:
+      type: "cookieBased"
+      sessionName: "connect.sid"
+
+    # Users
+    users:
+      - id: "admin-user"
+        name: "Admin"
+        credentials:
+          username: "admin@patrolmanager.com"
+          password: "Admin123"
+      - id: "guard-user"
+        name: "Guard"
+        credentials:
+          username: "guard@patrolmanager.com"
+          password: "Guard123"
+
+    # Authorization
+    authorization:
+      type: "rbac"
+      roles: ["Admin", "Manager", "Supervisor", "Guard"]
+
+# Exclusions (false positives and non-testable endpoints)
+exclusions:
+  # Exclude these URLs from scanning
+  urls:
+    - "http://localhost:3000/api/auth/logout"
+    - "http://localhost:3000/api/auth/logout-all"
+    - "http://localhost:3000/api-docs.*"
+    - "http://localhost:3000/health"
+    - "http://localhost:3000/uploads/.*"
+
+  # Exclude these parameters from scanning
+  parameters:
+    - "_csrf"
+    - "authenticity_token"
+    - "captcha_token"
+
+# Reporting
+report:
+  # Output formats
+  formats:
+    - HTML
+    - XML
+    - JSON
+    - MD
+
+  # Report directory
+  outputDirectory: "reports/security"
+
+  # Include details
+  includeDetails: true
+
+# Connection timeout settings
+connection:
+  timeoutInSecs: 60
+  # Retry on failure
+  retryOnFailure: true
+  # Max number of retries
+  maxRetries: 3
+
+# Database options (for persistence)
+database:
+  # Options: none, fs
+  type: "fs"
+  # Database path (if type is fs)
+  fsPath: "/zap/wrk/zap.db"
+
+# Extension settings
+extensions:
+  # Enable beta quality add-ons
+  beta: false
+
+  # Install updates automatically
+  updateOnStartup: false
+
+  # Check for updates
+  checkForUpdates: false
+
+  # Specific extensions
+  enable:
+    - "pscan"  # Passive scanner
+    - "ascan"  # Active scanner
+    - "spider" # Spider
+    - "ajaxSpider"  # Ajax Spider (optional)
+
+# Alert Filters (reduce noise)
+alertFilters:
+  # Filter out specific alerts by plugin ID
+  byPluginId:
+    # Example: Don't report X-Frame-Options as high for API
+    - pluginId: 10020
+      threshold: "Low"
+
+# Proxy settings
+proxy:
+  # Chain proxy (if needed)
+  chain: {
+    "enabled": false,
+    "host": "",
+    "port": 0,
+    "username": "",
+    "password": ""
+  }
+
+# Local proxies (ZAP itself)
+localProxies:
+  - address: "0.0.0.0"
+    port: 8080
+    proxyProtocol: "https"
+    behindNAT: false
+
+# Script settings
+scripts:
+  # Load custom scripts
+  paths: []
+  # Enable script console output
+  enableConsole: true

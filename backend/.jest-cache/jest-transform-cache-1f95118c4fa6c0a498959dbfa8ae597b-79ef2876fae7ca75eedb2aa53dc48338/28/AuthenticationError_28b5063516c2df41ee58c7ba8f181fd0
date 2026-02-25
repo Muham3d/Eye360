@@ -1,0 +1,55 @@
+ce9b289247ac9703fe4684fdeb31ab15
+"use strict";
+/**
+ * Authentication Error
+ *
+ * Thrown specifically when authentication credentials are invalid.
+ * Distinct from UnauthorizedError which is for missing authentication.
+ *
+ * @module core/domain/errors
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuthenticationError = void 0;
+const AppError_js_1 = require("./AppError.js");
+/**
+ * Authentication error class
+ * Used when provided credentials are invalid
+ */
+class AuthenticationError extends AppError_js_1.AppError {
+    constructor(message = 'Invalid credentials', context) {
+        super(message, 401, 'AUTHENTICATION_FAILED', true, context);
+        this.name = 'AuthenticationError';
+    }
+    /**
+     * Create error for invalid login credentials
+     */
+    static invalidCredentials() {
+        return new AuthenticationError('Invalid email or password');
+    }
+    /**
+     * Create error for invalid token
+     */
+    static invalidToken() {
+        return new AuthenticationError('Invalid authentication token');
+    }
+    /**
+     * Create error for expired token
+     */
+    static expiredToken() {
+        return new AuthenticationError('Authentication token has expired');
+    }
+    /**
+     * Create error for account locked
+     */
+    static accountLocked() {
+        return new AuthenticationError('Account has been locked due to too many failed attempts');
+    }
+    /**
+     * Create error for account disabled
+     */
+    static accountDisabled() {
+        return new AuthenticationError('Account has been disabled. Please contact an administrator.');
+    }
+}
+exports.AuthenticationError = AuthenticationError;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXFVzZXJzXFxNb2hhbWVkXFxEZXNrdG9wXFxQcm9qZWN0c1xcUGF0cm9sTWFuYWdlclxcYmFja2VuZFxcc3JjXFxjb3JlXFxkb21haW5cXGVycm9yc1xcQXV0aGVudGljYXRpb25FcnJvci50cyIsIm1hcHBpbmdzIjoiO0FBQUE7Ozs7Ozs7R0FPRzs7O0FBRUgsK0NBQXlDO0FBRXpDOzs7R0FHRztBQUNILE1BQWEsbUJBQW9CLFNBQVEsc0JBQVE7SUFDL0MsWUFDRSxVQUFrQixxQkFBcUIsRUFDdkMsT0FBaUM7UUFFakMsS0FBSyxDQUFDLE9BQU8sRUFBRSxHQUFHLEVBQUUsdUJBQXVCLEVBQUUsSUFBSSxFQUFFLE9BQU8sQ0FBQyxDQUFDO1FBQzVELElBQUksQ0FBQyxJQUFJLEdBQUcscUJBQXFCLENBQUM7SUFDcEMsQ0FBQztJQUVEOztPQUVHO0lBQ0gsTUFBTSxDQUFDLGtCQUFrQjtRQUN2QixPQUFPLElBQUksbUJBQW1CLENBQUMsMkJBQTJCLENBQUMsQ0FBQztJQUM5RCxDQUFDO0lBRUQ7O09BRUc7SUFDSCxNQUFNLENBQUMsWUFBWTtRQUNqQixPQUFPLElBQUksbUJBQW1CLENBQUMsOEJBQThCLENBQUMsQ0FBQztJQUNqRSxDQUFDO0lBRUQ7O09BRUc7SUFDSCxNQUFNLENBQUMsWUFBWTtRQUNqQixPQUFPLElBQUksbUJBQW1CLENBQUMsa0NBQWtDLENBQUMsQ0FBQztJQUNyRSxDQUFDO0lBRUQ7O09BRUc7SUFDSCxNQUFNLENBQUMsYUFBYTtRQUNsQixPQUFPLElBQUksbUJBQW1CLENBQzVCLHlEQUF5RCxDQUMxRCxDQUFDO0lBQ0osQ0FBQztJQUVEOztPQUVHO0lBQ0gsTUFBTSxDQUFDLGVBQWU7UUFDcEIsT0FBTyxJQUFJLG1CQUFtQixDQUM1Qiw2REFBNkQsQ0FDOUQsQ0FBQztJQUNKLENBQUM7Q0FDRjtBQS9DRCxrREErQ0MiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiQzpcXFVzZXJzXFxNb2hhbWVkXFxEZXNrdG9wXFxQcm9qZWN0c1xcUGF0cm9sTWFuYWdlclxcYmFja2VuZFxcc3JjXFxjb3JlXFxkb21haW5cXGVycm9yc1xcQXV0aGVudGljYXRpb25FcnJvci50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIEF1dGhlbnRpY2F0aW9uIEVycm9yXG4gKlxuICogVGhyb3duIHNwZWNpZmljYWxseSB3aGVuIGF1dGhlbnRpY2F0aW9uIGNyZWRlbnRpYWxzIGFyZSBpbnZhbGlkLlxuICogRGlzdGluY3QgZnJvbSBVbmF1dGhvcml6ZWRFcnJvciB3aGljaCBpcyBmb3IgbWlzc2luZyBhdXRoZW50aWNhdGlvbi5cbiAqXG4gKiBAbW9kdWxlIGNvcmUvZG9tYWluL2Vycm9yc1xuICovXG5cbmltcG9ydCB7IEFwcEVycm9yIH0gZnJvbSAnLi9BcHBFcnJvci5qcyc7XG5cbi8qKlxuICogQXV0aGVudGljYXRpb24gZXJyb3IgY2xhc3NcbiAqIFVzZWQgd2hlbiBwcm92aWRlZCBjcmVkZW50aWFscyBhcmUgaW52YWxpZFxuICovXG5leHBvcnQgY2xhc3MgQXV0aGVudGljYXRpb25FcnJvciBleHRlbmRzIEFwcEVycm9yIHtcbiAgY29uc3RydWN0b3IoXG4gICAgbWVzc2FnZTogc3RyaW5nID0gJ0ludmFsaWQgY3JlZGVudGlhbHMnLFxuICAgIGNvbnRleHQ/OiBSZWNvcmQ8c3RyaW5nLCB1bmtub3duPlxuICApIHtcbiAgICBzdXBlcihtZXNzYWdlLCA0MDEsICdBVVRIRU5USUNBVElPTl9GQUlMRUQnLCB0cnVlLCBjb250ZXh0KTtcbiAgICB0aGlzLm5hbWUgPSAnQXV0aGVudGljYXRpb25FcnJvcic7XG4gIH1cblxuICAvKipcbiAgICogQ3JlYXRlIGVycm9yIGZvciBpbnZhbGlkIGxvZ2luIGNyZWRlbnRpYWxzXG4gICAqL1xuICBzdGF0aWMgaW52YWxpZENyZWRlbnRpYWxzKCk6IEF1dGhlbnRpY2F0aW9uRXJyb3Ige1xuICAgIHJldHVybiBuZXcgQXV0aGVudGljYXRpb25FcnJvcignSW52YWxpZCBlbWFpbCBvciBwYXNzd29yZCcpO1xuICB9XG5cbiAgLyoqXG4gICAqIENyZWF0ZSBlcnJvciBmb3IgaW52YWxpZCB0b2tlblxuICAgKi9cbiAgc3RhdGljIGludmFsaWRUb2tlbigpOiBBdXRoZW50aWNhdGlvbkVycm9yIHtcbiAgICByZXR1cm4gbmV3IEF1dGhlbnRpY2F0aW9uRXJyb3IoJ0ludmFsaWQgYXV0aGVudGljYXRpb24gdG9rZW4nKTtcbiAgfVxuXG4gIC8qKlxuICAgKiBDcmVhdGUgZXJyb3IgZm9yIGV4cGlyZWQgdG9rZW5cbiAgICovXG4gIHN0YXRpYyBleHBpcmVkVG9rZW4oKTogQXV0aGVudGljYXRpb25FcnJvciB7XG4gICAgcmV0dXJuIG5ldyBBdXRoZW50aWNhdGlvbkVycm9yKCdBdXRoZW50aWNhdGlvbiB0b2tlbiBoYXMgZXhwaXJlZCcpO1xuICB9XG5cbiAgLyoqXG4gICAqIENyZWF0ZSBlcnJvciBmb3IgYWNjb3VudCBsb2NrZWRcbiAgICovXG4gIHN0YXRpYyBhY2NvdW50TG9ja2VkKCk6IEF1dGhlbnRpY2F0aW9uRXJyb3Ige1xuICAgIHJldHVybiBuZXcgQXV0aGVudGljYXRpb25FcnJvcihcbiAgICAgICdBY2NvdW50IGhhcyBiZWVuIGxvY2tlZCBkdWUgdG8gdG9vIG1hbnkgZmFpbGVkIGF0dGVtcHRzJ1xuICAgICk7XG4gIH1cblxuICAvKipcbiAgICogQ3JlYXRlIGVycm9yIGZvciBhY2NvdW50IGRpc2FibGVkXG4gICAqL1xuICBzdGF0aWMgYWNjb3VudERpc2FibGVkKCk6IEF1dGhlbnRpY2F0aW9uRXJyb3Ige1xuICAgIHJldHVybiBuZXcgQXV0aGVudGljYXRpb25FcnJvcihcbiAgICAgICdBY2NvdW50IGhhcyBiZWVuIGRpc2FibGVkLiBQbGVhc2UgY29udGFjdCBhbiBhZG1pbmlzdHJhdG9yLidcbiAgICApO1xuICB9XG59XG4iXSwidmVyc2lvbiI6M30=

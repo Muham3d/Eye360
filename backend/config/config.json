@@ -1,0 +1,55 @@
+{
+  "development": {
+    "dialect": "sqlite",
+    "storage": "./data/patrolmanager.sqlite",
+    "logging": true,
+    "define": {
+      "underscored": true,
+      "freezeTableName": true,
+      "timestamps": true,
+      "createdAt": "created_at",
+      "updatedAt": "updated_at"
+    }
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": "./data/patrolmanager-test.sqlite",
+    "logging": false,
+    "define": {
+      "underscored": true,
+      "freezeTableName": true,
+      "timestamps": true,
+      "createdAt": "created_at",
+      "updatedAt": "updated_at"
+    }
+  },
+  "production": {
+    "dialect": "postgres",
+    "host": "${DB_HOST}",
+    "port": "${DB_PORT}",
+    "database": "${DB_NAME}",
+    "username": "${DB_USER}",
+    "password": "${DB_PASSWORD}",
+    "ssl": true,
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    },
+    "logging": false,
+    "define": {
+      "underscored": true,
+      "freezeTableName": true,
+      "timestamps": true,
+      "createdAt": "created_at",
+      "updatedAt": "updated_at"
+    },
+    "pool": {
+      "max": 20,
+      "min": 2,
+      "acquire": 30000,
+      "idle": 10000
+    }
+  }
+}

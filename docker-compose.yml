@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 15 Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: patrolmanager-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: patrolmanager
+      POSTGRES_USER: patrolmanager
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-patrolmanager_dev_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - patrolmanager-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patrolmanager -d patrolmanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # PgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: patrolmanager-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@patrolmanager.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-pgadmin_password}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - patrolmanager-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - admin
+
+  # Redis (for future use - caching, sessions, Socket.io adapter)
+  redis:
+    image: redis:7-alpine
+    container_name: patrolmanager-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - patrolmanager-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+    profiles:
+      - redis
+
+networks:
+  patrolmanager-network:
+    name: patrolmanager-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: patrolmanager-postgres-data
+  pgadmin_data:
+    name: patrolmanager-pgadmin-data
+  redis_data:
+    name: patrolmanager-redis-data

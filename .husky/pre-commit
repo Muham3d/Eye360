@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running pre-commit hooks..."
+
+# Run ESLint on staged files
+echo "Running ESLint..."
+npx eslint --fix "backend/src/**/*.{js,ts}"
+
+# Run Prettier check
+echo "Running Prettier..."
+npx prettier --check "backend/src/**/*.{js,ts,json,md}"
+
+echo "Pre-commit hooks completed!"

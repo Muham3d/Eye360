@@ -1,0 +1,533 @@
+<%
+/**
+ * User Form View
+ *
+ * Create or edit user form
+ *
+ * @param {Object} user - User data (for edit mode)
+ * @param {Array} roles - Available roles
+ * @param {Object} errors - Validation errors
+ * @param {string} mode - 'create' or 'edit'
+ */
+%>
+
+<%
+const isEdit = mode === 'edit';
+const user = user || {};
+const errors = errors || {};
+%>
+
+<!-- Page Header -->
+<div class="bg-white border-b border-secondary-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <nav class="flex items-center gap-2 text-sm text-secondary-500 mb-2" aria-label="Breadcrumb">
+          <a href="/users" class="hover:text-secondary-700">Users</a>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+          <span class="text-secondary-900"><%= isEdit ? 'Edit User' : 'New User' %></span>
+        </nav>
+        <h1 class="text-2xl font-bold text-secondary-900"><%= isEdit ? 'Edit User' : 'Add New User' %></h1>
+        <p class="text-secondary-500 mt-1"><%= isEdit ? 'Update user information and permissions' : 'Create a new user account' %></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User Form Content -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-3xl">
+    <form id="user-form" method="POST" action="<%= isEdit ? '/users/' + user.id : '/users' %>" class="space-y-6">
+      <%= isEdit ? '<input type="hidden" name="_method" value="PUT">' : '' %>
+
+      <!-- User Information Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold text-secondary-900">User Information</h2>
+          <p class="text-sm text-secondary-500 mt-1">Basic user details and contact information</p>
+        </div>
+        <div class="card-body space-y-4">
+          <!-- Name Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- First Name -->
+            <div class="input-group">
+              <label for="firstName" class="input-label">
+                First Name <span class="text-error-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                class="input <%= errors.firstName ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+                value="<%= user.firstName || '' %>"
+                required
+                minlength="2"
+                maxlength="50"
+                placeholder="John"
+                aria-invalid="<%= errors.firstName ? 'true' : 'false' %>"
+                aria-describedby="<%= errors.firstName ? 'firstName-error' : '' %>">
+              <% if (errors.firstName) { %>
+                <p id="firstName-error" class="input-error"><%= errors.firstName %></p>
+              <% } %>
+            </div>
+
+            <!-- Last Name -->
+            <div class="input-group">
+              <label for="lastName" class="input-label">
+                Last Name <span class="text-error-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                class="input <%= errors.lastName ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+                value="<%= user.lastName || '' %>"
+                required
+                minlength="2"
+                maxlength="50"
+                placeholder="Doe"
+                aria-invalid="<%= errors.lastName ? 'true' : 'false' %>"
+                aria-describedby="<%= errors.lastName ? 'lastName-error' : '' %>">
+              <% if (errors.lastName) { %>
+                <p id="lastName-error" class="input-error"><%= errors.lastName %></p>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="input-group">
+            <label for="email" class="input-label">
+              Email Address <span class="text-error-500">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="input <%= errors.email ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+              value="<%= user.email || '' %>"
+              required
+              maxlength="255"
+              placeholder="john.doe@example.com"
+              aria-invalid="<%= errors.email ? 'true' : 'false' %>"
+              aria-describedby="<%= errors.email ? 'email-error' : 'email-description' %>">
+            <% if (errors.email) { %>
+              <p id="email-error" class="input-error"><%= errors.email %></p>
+            <% } else { %>
+              <p id="email-description" class="text-xs text-secondary-500 mt-1">This email will be used for login and notifications.</p>
+            <% } %>
+          </div>
+
+          <!-- Phone -->
+          <div class="input-group">
+            <label for="phone" class="input-label">Phone Number (Optional)</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              class="input <%= errors.phone ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+              value="<%= user.phone || '' %>"
+              maxlength="20"
+              placeholder="+1 (555) 000-0000"
+              aria-invalid="<%= errors.phone ? 'true' : 'false' %>"
+              aria-describedby="<%= errors.phone ? 'phone-error' : 'phone-description' %>">
+            <% if (errors.phone) { %>
+              <p id="phone-error" class="input-error"><%= errors.phone %></p>
+            <% } else { %>
+              <p id="phone-description" class="text-xs text-secondary-500 mt-1">Contact phone for emergency communications.</p>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role & Status Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold text-secondary-900">Role & Status</h2>
+          <p class="text-sm text-secondary-500 mt-1">Configure user permissions and account status</p>
+        </div>
+        <div class="card-body space-y-4">
+          <!-- Role -->
+          <div class="input-group">
+            <label for="roleId" class="input-label">
+              Role <span class="text-error-500">*</span>
+            </label>
+            <select
+              id="roleId"
+              name="roleId"
+              class="input <%= errors.roleId ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+              required
+              aria-invalid="<%= errors.roleId ? 'true' : 'false' %>"
+              aria-describedby="<%= errors.roleId ? 'roleId-error' : 'role-description' %>">
+              <option value="">Select a role...</option>
+              <% (roles || []).forEach(role => { %>
+                <option value="<%= role.id %>" <%= user.roleId === role.id ? 'selected' : '' %>>
+                  <%= role.name.charAt(0).toUpperCase() + role.name.slice(1) %> - <%= role.description || 'System role' %>
+                </option>
+              <% }); %>
+            </select>
+            <% if (errors.roleId) { %>
+              <p id="roleId-error" class="input-error"><%= errors.roleId %></p>
+            <% } else { %>
+              <p id="role-description" class="text-xs text-secondary-500 mt-1">The role determines the user's permissions and access level.</p>
+            <% } %>
+
+            <!-- Role Descriptions -->
+            <div class="mt-3 p-3 bg-secondary-50 rounded-lg">
+              <p class="text-xs font-medium text-secondary-700 mb-2">Role Permissions:</p>
+              <div class="space-y-1 text-xs text-secondary-600">
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-primary">Admin</span>
+                  <span>Full system access and user management</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="badge bg-purple-100 text-purple-800">Manager</span>
+                  <span>Site management, reports, and guard supervision</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-warning">Supervisor</span>
+                  <span>Patrol oversight and incident management</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-secondary">Guard</span>
+                  <span>Basic patrol and checkpoint access</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="input-group">
+            <label for="status" class="input-label">
+              Status <span class="text-error-500">*</span>
+            </label>
+            <select
+              id="status"
+              name="status"
+              class="input <%= errors.status ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+              required
+              aria-invalid="<%= errors.status ? 'true' : 'false' %>"
+              aria-describedby="<%= errors.status ? 'status-error' : 'status-description' %>">
+              <option value="active" <%= user.status === 'active' || !user.status ? 'selected' : ''>>Active</option>
+              <option value="inactive" <%= user.status === 'inactive' ? 'selected' : ''>>Inactive</option>
+              <option value="suspended" <%= user.status === 'suspended' ? 'selected' : ''>>Suspended</option>
+              <option value="pending" <%= user.status === 'pending' ? 'selected' : ''>>Pending</option>
+            </select>
+            <% if (errors.status) { %>
+              <p id="status-error" class="input-error"><%= errors.status %></p>
+            <% } else { %>
+              <p id="status-description" class="text-xs text-secondary-500 mt-1">
+                <span class="badge badge-success">Active</span> User can log in and access the system
+                <span class="mx-1">•</span>
+                <span class="badge badge-secondary">Inactive</span> Account disabled but not deleted
+                <span class="mx-1">•</span>
+                <span class="badge badge-error">Suspended</span> Temporarily locked
+                <span class="mx-1">•</span>
+                <span class="badge badge-warning">Pending</span> Awaiting verification
+              </p>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Card (Create Mode Only) -->
+      <% if (!isEdit) { %>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Password</h2>
+            <p class="text-sm text-secondary-500 mt-1">Set an initial password for the user</p>
+          </div>
+          <div class="card-body space-y-4">
+            <!-- Password -->
+            <div class="input-group">
+              <label for="password" class="input-label">
+                Password <span class="text-error-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  class="input pr-10 <%= errors.password ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+                  required
+                  minlength="8"
+                  placeholder="Enter password"
+                  aria-invalid="<%= errors.password ? 'true' : 'false' %>"
+                  aria-describedby="<%= errors.password ? 'password-error' : 'password-requirements' %>">
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-secondary-600"
+                  onclick="togglePasswordVisibility('password', this)"
+                  aria-label="Toggle password visibility">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+              </div>
+              <% if (errors.password) { %>
+                <p id="password-error" class="input-error"><%= errors.password %></p>
+              <% } else { %>
+                <p id="password-requirements" class="text-xs text-secondary-500 mt-1">Must be at least 8 characters long. Include uppercase, lowercase, numbers, and symbols for better security.</p>
+              <% } %>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="input-group">
+              <label for="confirmPassword" class="input-label">
+                Confirm Password <span class="text-error-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  class="input pr-10 <%= errors.confirmPassword ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : '' %>"
+                  required
+                  minlength="8"
+                  placeholder="Confirm password"
+                  aria-invalid="<%= errors.confirmPassword ? 'true' : 'false' %>"
+                  aria-describedby="<%= errors.confirmPassword ? 'confirmPassword-error' : '' %>">
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-secondary-600"
+                  onclick="togglePasswordVisibility('confirmPassword', this)"
+                  aria-label="Toggle password visibility">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+              </div>
+              <% if (errors.confirmPassword) { %>
+                <p id="confirmPassword-error" class="input-error"><%= errors.confirmPassword %></p>
+              <% } %>
+            </div>
+
+            <!-- Password Strength Indicator -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-secondary-700">Password Strength:</span>
+                <span id="password-strength-text" class="text-xs text-secondary-500">Enter password</span>
+              </div>
+              <div class="h-2 bg-secondary-200 rounded-full overflow-hidden">
+                <div id="password-strength-bar" class="h-full w-0 transition-all duration-300 bg-error-500"></div>
+              </div>
+            </div>
+
+            <!-- Auto-generate Password -->
+            <div class="flex items-center gap-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
+              <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+              </svg>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-primary-900">Generate a secure password</p>
+                <p class="text-xs text-primary-700">Create a random, strong password for the user</p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary text-sm"
+                onclick="generatePassword()">
+                Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Account Settings (Edit Mode Only) -->
+      <% if (isEdit && user) { %>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Account Settings</h2>
+            <p class="text-sm text-secondary-500 mt-1">Additional account management options</p>
+          </div>
+          <div class="card-body space-y-4">
+            <!-- Account Information -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="text-secondary-500">Account Created:</span>
+                <span class="ml-2 text-secondary-900"><%= new Date(user.createdAt).toLocaleDateString() %></span>
+              </div>
+              <div>
+                <span class="text-secondary-500">Last Updated:</span>
+                <span class="ml-2 text-secondary-900"><%= new Date(user.updatedAt).toLocaleDateString() %></span>
+              </div>
+              <div>
+                <span class="text-secondary-500">Last Login:</span>
+                <span class="ml-2 text-secondary-900">
+                  <%= user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never' %>
+                </span>
+              </div>
+              <div>
+                <span class="text-secondary-500">Failed Attempts:</span>
+                <span class="ml-2 text-secondary-900"><%= user.failedLoginAttempts || 0 %></span>
+              </div>
+            </div>
+
+            <!-- Reset Password Link -->
+            <div class="pt-4 border-t border-secondary-200">
+              <a href="/users/<%= user.id %>/reset-password" class="btn btn-secondary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                Send Password Reset Email
+              </a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Form Actions -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <a href="/users" class="btn btn-secondary w-full sm:w-auto justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Cancel
+        </a>
+        <div class="flex gap-3 w-full sm:w-auto">
+          <% if (isEdit) { %>
+            <button type="button" class="btn btn-secondary flex-1 sm:flex-none justify-center" onclick="saveAndContinue()">
+              Save & Continue
+            </button>
+          <% } %>
+          <button type="submit" class="btn btn-primary flex-1 sm:flex-none justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <%= isEdit ? 'Save Changes' : 'Create User' %>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<% blocks.scripts = `
+<script>
+  // Toggle password visibility
+  function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const isPassword = input.type === 'password';
+
+    input.type = isPassword ? 'text' : 'password';
+
+    // Update icon
+    button.innerHTML = isPassword
+      ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>'
+      : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>';
+
+    button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+  }
+
+  // Check password strength
+  const passwordInput = document.getElementById('password');
+  if (passwordInput) {
+    passwordInput.addEventListener('input', function() {
+      const password = this.value;
+      const strengthBar = document.getElementById('password-strength-bar');
+      const strengthText = document.getElementById('password-strength-text');
+
+      let strength = 0;
+      let text = 'Enter password';
+      let color = 'bg-error-500';
+
+      if (password.length >= 8) strength++;
+      if (password.length >= 12) strength++;
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+      if (/[0-9]/.test(password)) strength++;
+      if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+      if (password.length === 0) {
+        text = 'Enter password';
+        color = 'bg-error-500';
+        strength = 0;
+      } else if (strength < 2) {
+        text = 'Weak password';
+        color = 'bg-error-500';
+      } else if (strength < 4) {
+        text = 'Fair password';
+        color = 'bg-warning-500';
+      } else if (strength < 5) {
+        text = 'Good password';
+        color = 'bg-success-500';
+      } else {
+        text = 'Strong password';
+        color = 'bg-success-600';
+      }
+
+      const percentage = password.length === 0 ? 0 : (strength / 5) * 100;
+      strengthBar.style.width = percentage + '%';
+      strengthBar.className = 'h-full transition-all duration-300 ' + color;
+      strengthText.textContent = text;
+      strengthText.className = 'text-xs ' + (password.length === 0 ? 'text-secondary-500' : color.replace('bg-', 'text-'));
+    });
+  }
+
+  // Generate random password
+  function generatePassword() {
+    const length = 16;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+    let password = '';
+
+    // Ensure at least one of each type
+    password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+    password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+    password += '0123456789'[Math.floor(Math.random() * 10)];
+    password += '!@#$%^&*()_+-=[]{}|;:,.<>?'[Math.floor(Math.random() * 30)];
+
+    // Fill the rest
+    for (let i = password.length; i < length; i++) {
+      password += charset[Math.floor(Math.random() * charset.length)];
+    }
+
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirmPassword');
+
+    if (passwordInput) {
+      passwordInput.value = password;
+      passwordInput.dispatchEvent(new Event('input'));
+    }
+    if (confirmInput) {
+      confirmInput.value = password;
+    }
+  }
+
+  // Save and continue (for edit mode)
+  function saveAndContinue() {
+    const form = document.getElementById('user-form');
+    form.action += '?continue=true';
+    form.submit();
+  }
+
+  // Confirm password validation
+  const confirmPasswordInput = document.getElementById('confirmPassword');
+  if (confirmPasswordInput) {
+    confirmPasswordInput.addEventListener('input', function() {
+      const password = document.getElementById('password').value;
+      if (this.value && this.value !== password) {
+        this.setCustomValidity('Passwords do not match');
+      } else {
+        this.setCustomValidity('');
+      }
+    });
+  }
+
+  // Form validation before submit
+  document.getElementById('user-form').addEventListener('submit', function(e) {
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirmPassword');
+
+    if (password && confirmPassword && password.value !== confirmPassword.value) {
+      e.preventDefault();
+      confirmPassword.setCustomValidity('Passwords do not match');
+      confirmPassword.reportValidity();
+    }
+  });
+</script>
+`; %>

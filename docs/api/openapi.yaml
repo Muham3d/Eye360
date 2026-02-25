@@ -1,0 +1,5487 @@
+openapi: 3.0.3
+info:
+  title: PatrolManager API
+  description: |
+    RESTful API for PatrolManager - Security guard management system with real-time tracking,
+    incident reporting, and patrol coordination.
+
+    ## Authentication Methods
+    The API supports two authentication methods:
+    - **JWT Bearer Token**: Used by mobile clients (Android Guard App)
+    - **Session Cookie**: Used by web admin panel
+
+    ## Rate Limiting
+    - **Unauthenticated**: 100 requests per 15 minutes
+    - **Authenticated**: 1000 requests per 15 minutes
+    - **Auth endpoints**: 10 requests per minute per IP
+
+    ## Error Response Format
+    All errors follow a consistent structure:
+    ```json
+    {
+      "error": {
+        "code": "AUTH_001",
+        "message": "Invalid credentials",
+        "details": {}
+      },
+      "timestamp": "2024-02-23T10:00:00Z"
+    }
+    ```
+
+    ## Pagination
+    List endpoints support pagination via `page` and `limit` parameters.
+    Response includes pagination metadata.
+
+    ## Versioning
+    Current API version: v1
+
+  version: 1.0.0
+  contact:
+    name: PatrolManager API Support
+    email: support@patrolmanager.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+  - url: https://api.patrolmanager.com/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: Users
+    description: User management operations
+  - name: Roles
+    description: Role and permission management
+  - name: Sites
+    description: Site and location management
+  - name: Checkpoints
+    description: Patrol checkpoint management
+  - name: Patrols
+    description: Patrol template and execution management
+  - name: Incidents
+    description: Incident reporting and workflow
+  - name: Reports
+    description: Analytics and reporting endpoints
+
+# ============================================
+# SECURITY SCHEMAS
+# ============================================
+security:
+  - bearerAuth: []
+  - sessionAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication for mobile clients
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Session-based authentication for web admin panel
+
+  # ============================================
+  # SCHEMAS / DTOs
+  # ============================================
+  schemas:
+    # Common Schemas
+    Error:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Unique error code (e.g., AUTH_001, VAL_001)
+              example: AUTH_001
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid credentials
+            details:
+              type: object
+              description: Additional error context
+              additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:00:00Z
+
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Items per page
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 8
+
+    PaginatedResponse:
+      description: Wrapper for paginated list responses
+      allOf:
+        - type: object
+          required:
+            - data
+            - meta
+          properties:
+            data:
+              type: array
+              items: {}
+            meta:
+              $ref: '#/components/schemas/PaginationMeta'
+
+    # Authentication Schemas
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: john.doe@patrolmanager.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$'
+          description: Must contain at least one uppercase, one lowercase, and one number
+          example: SecurePass123
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: John
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Doe
+        role:
+          $ref: '#/components/schemas/UserRole'
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: '+1234567890'
+        employeeId:
+          type: string
+          maxLength: 50
+          example: EMP-2024-001
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+        - clientType
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@patrolmanager.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123
+        clientType:
+          type: string
+          enum: [mobile, web]
+          description: |
+            mobile: Returns JWT token for Android app
+            web: Sets session cookie for admin panel
+          example: mobile
+        deviceId:
+          type: string
+          description: Device identifier for mobile clients
+          example: android_a1b2c3d4
+          maxLength: 255
+
+    LoginResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT access token (returned only for mobile clients)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: JWT refresh token (returned only for mobile clients)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@patrolmanager.com
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          description: Password reset token from email
+          example: abc123def456
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$'
+          example: NewSecurePass123
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          example: OldPass123
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$'
+          example: NewSecurePass123
+
+    # User Schemas
+    UserRole:
+      type: string
+      enum: [admin, manager, supervisor, guard]
+      description: |
+        - **admin**: Full system access, user/role management
+        - **manager**: Site management, reports, supervisor assignments
+        - **supervisor**: Guard management, patrol oversight, incident handling
+        - **guard**: Patrol execution, incident reporting, SOS
+      example: guard
+
+    UserStatus:
+      type: string
+      enum: [active, inactive, suspended, on_leave]
+      description: |
+        - **active**: User can access the system
+        - **inactive**: User account created but not yet activated
+        - **suspended**: Temporarily suspended due to policy violation
+        - **on_leave**: User is on leave and cannot access the system
+      example: active
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - role
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          example: john.doe@patrolmanager.com
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        fullName:
+          type: string
+          readOnly: true
+          example: John Doe
+        phone:
+          type: string
+          nullable: true
+          example: '+1234567890'
+        employeeId:
+          type: string
+          nullable: true
+          example: EMP-2024-001
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://cdn.patrolmanager.com/avatars/john-doe.jpg
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T10:00:00Z
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:00:00Z
+        assignedSites:
+          type: array
+          readOnly: true
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: jane.doe@patrolmanager.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          example: SecurePass123
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Jane
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Doe
+        role:
+          $ref: '#/components/schemas/UserRole'
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: '+1234567890'
+        employeeId:
+          type: string
+          maxLength: 50
+          example: EMP-2024-002
+        status:
+          $ref: '#/components/schemas/UserStatus'
+          default: active
+        siteIds:
+          type: array
+          description: List of site IDs to assign the user to
+          items:
+            type: string
+            format: uuid
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Jane
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Smith
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: '+1234567890'
+        employeeId:
+          type: string
+          maxLength: 50
+          example: EMP-2024-002
+        siteIds:
+          type: array
+          description: List of site IDs to assign the user to (replaces existing)
+          items:
+            type: string
+            format: uuid
+
+    ChangeRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    ChangeStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        reason:
+          type: string
+          description: Reason for status change (required for suspension)
+          maxLength: 500
+          example: Policy violation - unauthorized site access
+
+    UserListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Page number
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Items per page
+        role:
+          type: string
+          enum: [admin, manager, supervisor, guard]
+          description: Filter by role
+        status:
+          type: string
+          enum: [active, inactive, suspended, on_leave]
+          description: Filter by status
+        search:
+          type: string
+          description: Search in name, email, employee ID
+          maxLength: 100
+        siteId:
+          type: string
+          format: uuid
+          description: Filter users assigned to specific site
+        sortBy:
+          type: string
+          enum: [firstName, lastName, email, createdAt, lastLoginAt]
+          default: createdAt
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    # Role & Permission Schemas
+    Role:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - level
+      properties:
+        id:
+          type: string
+          example: admin
+        name:
+          type: string
+          example: Administrator
+        description:
+          type: string
+          example: Full system access with user and role management
+        level:
+          type: integer
+          description: |
+            Hierarchical level for role comparison:
+            admin: 100, manager: 75, supervisor: 50, guard: 25
+          example: 100
+
+    RoleWithPermissions:
+      allOf:
+        - $ref: '#/components/schemas/Role'
+        - type: object
+          required:
+            - permissions
+          properties:
+            permissions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Permission'
+
+    Permission:
+      type: object
+      required:
+        - id
+        - name
+        - resource
+        - action
+        - description
+      properties:
+        id:
+          type: string
+          example: users.create
+        name:
+          type: string
+          example: Create Users
+        resource:
+          type: string
+          description: Resource type this permission applies to
+          example: users
+        action:
+          type: string
+          description: Action allowed on the resource
+          example: create
+        description:
+          type: string
+          example: Ability to create new user accounts
+
+    # ============================================
+    # SITE MANAGEMENT SCHEMAS
+    # ============================================
+    SiteStatus:
+      type: string
+      enum: [active, inactive, maintenance]
+      description: |
+        - **active**: Site is operational and ready for patrols
+        - **inactive**: Site is temporarily closed
+        - **maintenance**: Site is under maintenance
+      example: active
+
+    SiteType:
+      type: string
+      enum: [commercial, residential, industrial, mixed_use, government, educational, healthcare, retail, other]
+      description: Type of property/site
+      example: commercial
+
+    Site:
+      type: object
+      required:
+        - id
+        - name
+        - address
+        - status
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Downtown Office Complex
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          example: Multi-story office building with 24/7 security requirements
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: 123 Main St, City, State 12345
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 40.7128
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: -74.0060
+        geofence:
+          $ref: '#/components/schemas/GeoJSONPolygon'
+        geofenceRadius:
+          type: integer
+          description: Deprecated: Use geofence instead. Circular geofence radius in meters
+          minimum: 10
+          maximum: 10000
+          deprecated: true
+          example: 150
+        status:
+          $ref: '#/components/schemas/SiteStatus'
+        type:
+          $ref: '#/components/schemas/SiteType'
+        timezone:
+          type: string
+          format: timezone
+          example: America/New_York
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Client/organization that owns this site
+          example: 550e8400-e29b-41d4-a716-446655440002
+        shiftConfig:
+          type: object
+          description: Site-specific shift configuration
+          nullable: true
+          properties:
+            requiresClockIn:
+              type: boolean
+              description: Whether guards must clock in within geofence
+              example: true
+            clockInTolerance:
+              type: integer
+              description: Minutes before/after shift start for clock-in
+              example: 15
+            requiresClockOut:
+              type: boolean
+              example: true
+            minimumPatrolDuration:
+              type: integer
+              description: Minimum minutes for a patrol to be valid
+              example: 30
+        operatingHours:
+          type: object
+          description: Site operating hours
+          nullable: true
+          properties:
+            monday:
+              $ref: '#/components/schemas/OperatingDay'
+            tuesday:
+              $ref: '#/components/schemas/OperatingDay'
+            wednesday:
+              $ref: '#/components/schemas/OperatingDay'
+            thursday:
+              $ref: '#/components/schemas/OperatingDay'
+            friday:
+              $ref: '#/components/schemas/OperatingDay'
+            saturday:
+              $ref: '#/components/schemas/OperatingDay'
+            sunday:
+              $ref: '#/components/schemas/OperatingDay'
+        checkpointCount:
+          type: integer
+          readOnly: true
+          description: Number of checkpoints at this site
+          example: 12
+        activeGuards:
+          type: integer
+          readOnly: true
+          description: Number of guards currently on shift at this site
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:00:00Z
+
+    OperatingDay:
+      type: object
+      properties:
+        isOpen:
+          type: boolean
+          example: true
+        openTime:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: '08:00'
+        closeTime:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: '18:00'
+
+    GeoJSONPoint:
+      type: object
+      description: GeoJSON Point geometry
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+          description: [longitude, latitude] in WGS84
+          example: [-74.0060, 40.7128]
+
+    GeoJSONPolygon:
+      type: object
+      description: GeoJSON Polygon geometry for geofence boundaries
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Polygon]
+        coordinates:
+          type: array
+          description: Array of linear rings (first is outer, others are holes)
+          items:
+            type: array
+            minItems: 4
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+              description: [longitude, latitude] pairs
+          example:
+            [
+              [[-74.0060, 40.7128], [-74.0050, 40.7128], [-74.0050, 40.7138], [-74.0060, 40.7138], [-74.0060, 40.7128]]
+            ]
+
+    GeoJSONMultiPolygon:
+      type: object
+      description: GeoJSON MultiPolygon for complex geofences
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [MultiPolygon]
+        coordinates:
+          type: array
+          items:
+            type: array
+            description: Polygon coordinates
+
+    CreateSiteRequest:
+      type: object
+      required:
+        - name
+        - address
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Downtown Office Complex
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: 123 Main St, City, State 12345
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          nullable: true
+        geofence:
+          $ref: '#/components/schemas/GeoJSONPolygon'
+        geofenceRadius:
+          type: integer
+          minimum: 10
+          maximum: 10000
+          deprecated: true
+          nullable: true
+        status:
+          $ref: '#/components/schemas/SiteStatus'
+          default: active
+        type:
+          $ref: '#/components/schemas/SiteType'
+        timezone:
+          type: string
+          format: timezone
+          nullable: true
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftConfig:
+          type: object
+          nullable: true
+          properties:
+            requiresClockIn:
+              type: boolean
+            clockInTolerance:
+              type: integer
+              minimum: 0
+              maximum: 120
+            requiresClockOut:
+              type: boolean
+            minimumPatrolDuration:
+              type: integer
+              minimum: 5
+        operatingHours:
+          type: object
+          nullable: true
+          properties:
+            monday:
+              $ref: '#/components/schemas/OperatingDay'
+            tuesday:
+              $ref: '#/components/schemas/OperatingDay'
+            wednesday:
+              $ref: '#/components/schemas/OperatingDay'
+            thursday:
+              $ref: '#/components/schemas/OperatingDay'
+            friday:
+              $ref: '#/components/schemas/OperatingDay'
+            saturday:
+              $ref: '#/components/schemas/OperatingDay'
+            sunday:
+              $ref: '#/components/schemas/OperatingDay'
+
+    UpdateSiteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          nullable: true
+        geofence:
+          $ref: '#/components/schemas/GeoJSONPolygon'
+        status:
+          $ref: '#/components/schemas/SiteStatus'
+        type:
+          $ref: '#/components/schemas/SiteType'
+        timezone:
+          type: string
+          format: timezone
+          nullable: true
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftConfig:
+          type: object
+          nullable: true
+        operatingHours:
+          type: object
+          nullable: true
+
+    SiteListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        type:
+          type: string
+          enum: [commercial, residential, industrial, mixed_use, government, educational, healthcare, retail, other]
+        clientId:
+          type: string
+          format: uuid
+        search:
+          type: string
+          maxLength: 100
+        sortBy:
+          type: string
+          enum: [name, createdAt, updatedAt]
+          default: createdAt
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    # ============================================
+    # CHECKPOINT MANAGEMENT SCHEMAS
+    # ============================================
+    CheckpointType:
+      type: string
+      enum: [nfc, qr, gps]
+      description: |
+        - **nfc**: Requires NFC tag scan
+        - **qr**: Requires QR code scan
+        - **gps**: Verified by GPS proximity
+      example: nfc
+
+    CheckpointStatus:
+      type: string
+      enum: [active, inactive, maintenance]
+      description: |
+        - **active**: Checkpoint is operational
+        - **inactive**: Checkpoint is disabled
+        - **maintenance**: Checkpoint is under maintenance
+      example: active
+
+    Checkpoint:
+      type: object
+      required:
+        - id
+        - name
+        - siteId
+        - type
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440003
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Main Entrance
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          example: Primary entrance facing Main Street
+        siteId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        type:
+          $ref: '#/components/schemas/CheckpointType'
+        status:
+          $ref: '#/components/schemas/CheckpointStatus'
+        nfcTagId:
+          type: string
+          nullable: true
+          description: NFC tag identifier for NFC checkpoints
+          example: 04:A3:5B:C2:D1
+        qrCode:
+          type: string
+          nullable: true
+          description: Unique QR code string for QR checkpoints
+          example: CP-main-entrance-001
+        qrCodeUrl:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+          description: URL to generated QR code image
+          example: https://cdn.patrolmanager.com/qrcodes/CP-main-entrance-001.png
+        location:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        tolerance:
+          type: integer
+          description: GPS tolerance in meters for GPS checkpoints
+          minimum: 5
+          maximum: 500
+          default: 30
+          example: 30
+        requiredPhotos:
+          type: boolean
+          description: Whether photo evidence is required at this checkpoint
+          default: false
+        requiredNotes:
+          type: boolean
+          description: Whether notes are required when checking in at this checkpoint
+          default: false
+        timeLimit:
+          type: integer
+          description: Maximum seconds allowed at this checkpoint (0 = no limit)
+          minimum: 0
+          default: 0
+          example: 300
+        order:
+          type: integer
+          description: Display order for checkpoints at a site
+          minimum: 0
+          default: 0
+          example: 1
+        indoorLocation:
+          type: object
+          description: Indoor location details (floor, room, etc.)
+          nullable: true
+          properties:
+            floor:
+              type: string
+              example: '1'
+            room:
+              type: string
+              example: 'Lobby'
+            building:
+              type: string
+              example: 'Tower A'
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:00:00Z
+        lastVerified:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Last time this checkpoint was verified
+          example: 2024-02-23T09:30:00Z
+
+    CreateCheckpointRequest:
+      type: object
+      required:
+        - name
+        - siteId
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Main Entrance
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/CheckpointType'
+        status:
+          $ref: '#/components/schemas/CheckpointStatus'
+          default: active
+        nfcTagId:
+          type: string
+          nullable: true
+        qrCode:
+          type: string
+          nullable: true
+        location:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        tolerance:
+          type: integer
+          minimum: 5
+          maximum: 500
+          default: 30
+        requiredPhotos:
+          type: boolean
+          default: false
+        requiredNotes:
+          type: boolean
+          default: false
+        timeLimit:
+          type: integer
+          minimum: 0
+          default: 0
+        order:
+          type: integer
+          minimum: 0
+          default: 0
+        indoorLocation:
+          type: object
+          nullable: true
+          properties:
+            floor:
+              type: string
+            room:
+              type: string
+            building:
+              type: string
+
+    UpdateCheckpointRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        type:
+          $ref: '#/components/schemas/CheckpointType'
+        status:
+          $ref: '#/components/schemas/CheckpointStatus'
+        nfcTagId:
+          type: string
+          nullable: true
+        qrCode:
+          type: string
+          nullable: true
+        location:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        tolerance:
+          type: integer
+          minimum: 5
+          maximum: 500
+        requiredPhotos:
+          type: boolean
+        requiredNotes:
+          type: boolean
+        timeLimit:
+          type: integer
+          minimum: 0
+        order:
+          type: integer
+          minimum: 0
+        indoorLocation:
+          type: object
+          nullable: true
+          properties:
+            floor:
+              type: string
+            room:
+              type: string
+            building:
+              type: string
+
+    GenerateQRCodeRequest:
+      type: object
+      properties:
+        size:
+          type: integer
+          description: QR code image size in pixels
+          minimum: 100
+          maximum: 1000
+          default: 300
+        format:
+          type: string
+          enum: [png, svg]
+          default: png
+        includeLabel:
+          type: boolean
+          description: Include checkpoint name in the QR code image
+          default: true
+
+    QRCodeResponse:
+      type: object
+      required:
+        - qrCode
+        - url
+      properties:
+        qrCode:
+          type: string
+          description: The QR code string to be scanned
+          example: CP-main-entrance-001
+        url:
+          type: string
+          format: uri
+          description: URL to the generated QR code image
+          example: https://cdn.patrolmanager.com/qrcodes/CP-main-entrance-001.png
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the QR code expires (null = never expires)
+          example: 2025-12-31T23:59:59Z
+
+    CheckpointListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        siteId:
+          type: string
+          format: uuid
+          description: Filter by site
+        type:
+          type: string
+          enum: [nfc, qr, gps]
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        search:
+          type: string
+          maxLength: 100
+        sortBy:
+          type: string
+          enum: [name, order, createdAt, updatedAt]
+          default: order
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: asc
+
+    # ============================================
+    # PATROL TEMPLATE SCHEMAS
+    # ============================================
+    PatrolTemplateStatus:
+      type: string
+      enum: [active, inactive, draft]
+      description: |
+        - **active**: Template is available for scheduling
+        - **inactive**: Template is disabled
+        - **draft**: Template is being created
+      example: active
+
+    PatrolTemplateType:
+      type: string
+      enum: [scheduled, on_demand, incident_response]
+      description: |
+        - **scheduled**: Regularly scheduled patrol
+        - **on_demand**: Initiated by guard as needed
+        - **incident_response**: Triggered by incident
+      example: scheduled
+
+    PatrolFrequency:
+      type: string
+      enum: [once, daily, weekly, monthly, hourly, shift_based]
+      description: How often the patrol should be performed
+      example: hourly
+
+    PatrolTemplate:
+      type: object
+      required:
+        - id
+        - name
+        - siteId
+        - status
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440004
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Building A - Full Perimeter
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          example: Complete perimeter check of Building A including all entrances and exits
+        siteId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        status:
+          $ref: '#/components/schemas/PatrolTemplateStatus'
+        type:
+          $ref: '#/components/schemas/PatrolTemplateType'
+        frequency:
+          $ref: '#/components/schemas/PatrolFrequency'
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+          minimum: 1
+          example: 45
+        checkpointIds:
+          type: array
+          description: Ordered list of checkpoint IDs in the template
+          items:
+            type: string
+            format: uuid
+          example:
+            - 550e8400-e29b-41d4-a716-446655440003
+            - 550e8400-e29b-41d4-a716-446655440005
+            - 550e8400-e29b-41d4-a716-446655440006
+        checkpoints:
+          type: array
+          readOnly: true
+          description: Checkpoints with order
+          items:
+            type: object
+            properties:
+              checkpointId:
+                type: string
+                format: uuid
+              checkpoint:
+                $ref: '#/components/schemas/Checkpoint'
+              order:
+                type: integer
+                example: 1
+              timeLimit:
+                type: integer
+                nullable: true
+                example: 300
+              requiredPhotos:
+                type: boolean
+                example: true
+              requiredNotes:
+                type: boolean
+                example: false
+        schedule:
+          type: object
+          description: Schedule configuration for recurring patrols
+          nullable: true
+          properties:
+            startDate:
+              type: string
+              format: date
+              example: '2024-01-01'
+            endDate:
+              type: string
+              format: date
+              nullable: true
+              example: '2024-12-31'
+            times:
+              type: array
+              description: Scheduled times (24h format)
+              items:
+                type: string
+                pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+              example: ['08:00', '12:00', '16:00', '20:00']
+            daysOfWeek:
+              type: array
+              description: Days of week (0=Sunday, 6=Saturday)
+              items:
+                type: integer
+                minimum: 0
+                maximum: 6
+              example: [1, 2, 3, 4, 5]
+            interval:
+              type: integer
+              description: Interval in minutes for hourly patrols
+              example: 60
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+          default: normal
+        requiresSequential:
+          type: boolean
+          description: Whether checkpoints must be visited in order
+          default: true
+        allowSkip:
+          type: boolean
+          description: Whether guards can skip checkpoints
+          default: false
+        maxDelay:
+          type: integer
+          description: Maximum minutes allowed between checkpoints
+          minimum: 1
+          nullable: true
+          example: 15
+        assignedRoles:
+          type: array
+          description: Roles that can be assigned this patrol
+          items:
+            type: string
+            enum: [guard, supervisor]
+          example: [guard]
+        createdBy:
+          type: string
+          format: uuid
+          readOnly: true
+          example: 550e8400-e29b-41d4-a716-446655440007
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:00:00Z
+        checkpointCount:
+          type: integer
+          readOnly: true
+          example: 5
+
+    CreatePatrolTemplateRequest:
+      type: object
+      required:
+        - name
+        - siteId
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PatrolTemplateStatus'
+          default: draft
+        type:
+          $ref: '#/components/schemas/PatrolTemplateType'
+        frequency:
+          $ref: '#/components/schemas/PatrolFrequency'
+        estimatedDuration:
+          type: integer
+          minimum: 1
+        checkpointIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        checkpoints:
+          type: array
+          description: Checkpoints with configurations
+          items:
+            type: object
+            required:
+              - checkpointId
+              - order
+            properties:
+              checkpointId:
+                type: string
+                format: uuid
+              order:
+                type: integer
+                minimum: 0
+              timeLimit:
+                type: integer
+                minimum: 0
+                nullable: true
+              requiredPhotos:
+                type: boolean
+              requiredNotes:
+                type: boolean
+        schedule:
+          type: object
+          nullable: true
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        requiresSequential:
+          type: boolean
+        allowSkip:
+          type: boolean
+        maxDelay:
+          type: integer
+          minimum: 1
+          nullable: true
+        assignedRoles:
+          type: array
+          items:
+            type: string
+            enum: [guard, supervisor]
+
+    UpdatePatrolTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PatrolTemplateStatus'
+        type:
+          $ref: '#/components/schemas/PatrolTemplateType'
+        frequency:
+          $ref: '#/components/schemas/PatrolFrequency'
+        estimatedDuration:
+          type: integer
+          minimum: 1
+        schedule:
+          type: object
+          nullable: true
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        requiresSequential:
+          type: boolean
+        allowSkip:
+          type: boolean
+        maxDelay:
+          type: integer
+          minimum: 1
+          nullable: true
+        assignedRoles:
+          type: array
+          items:
+            type: string
+            enum: [guard, supervisor]
+
+    AddCheckpointToTemplateRequest:
+      type: object
+      required:
+        - checkpointId
+        - order
+      properties:
+        checkpointId:
+          type: string
+          format: uuid
+        order:
+          type: integer
+          minimum: 0
+          description: Position in the sequence (0-based)
+        timeLimit:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Max seconds at this checkpoint (0 = no limit)
+        requiredPhotos:
+          type: boolean
+          default: false
+        requiredNotes:
+          type: boolean
+          default: false
+
+    UpdateCheckpointInTemplateRequest:
+      type: object
+      properties:
+        order:
+          type: integer
+          minimum: 0
+        timeLimit:
+          type: integer
+          minimum: 0
+          nullable: true
+        requiredPhotos:
+          type: boolean
+        requiredNotes:
+          type: boolean
+
+    PatrolTemplateListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        siteId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, inactive, draft]
+        type:
+          type: string
+          enum: [scheduled, on_demand, incident_response]
+        search:
+          type: string
+          maxLength: 100
+        sortBy:
+          type: string
+          enum: [name, createdAt, updatedAt]
+          default: createdAt
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    # ============================================
+    # PATROL RUN SCHEMAS
+    # ============================================
+    PatrolRunStatus:
+      type: string
+      enum: [pending, in_progress, completed, abandoned, failed, overdue]
+      description: |
+        - **pending**: Scheduled but not started
+        - **in_progress**: Currently being executed
+        - **completed**: Successfully finished
+        - **abandoned**: Guard abandoned the patrol
+        - **failed**: System error or validation failure
+        - **overdue**: Past due time not started or completed
+      example: in_progress
+
+    PatrolRun:
+      type: object
+      required:
+        - id
+        - templateId
+        - siteId
+        - guardId
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440008
+        templateId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440004
+        template:
+          $ref: '#/components/schemas/PatrolTemplate'
+        siteId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        guardId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440009
+        guard:
+          $ref: '#/components/schemas/User'
+        status:
+          $ref: '#/components/schemas/PatrolRunStatus'
+        scheduledStart:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T08:00:00Z
+        scheduledEnd:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T09:00:00Z
+        actualStart:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T08:02:15Z
+        actualEnd:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T08:47:33Z
+        progress:
+          type: object
+          readOnly: true
+          description: Current progress of the patrol
+          properties:
+            totalCheckpoints:
+              type: integer
+              example: 5
+            completedCheckpoints:
+              type: integer
+              example: 3
+            skippedCheckpoints:
+              type: integer
+              example: 0
+            failedCheckpoints:
+              type: integer
+              example: 0
+            percentage:
+              type: integer
+              example: 60
+        checkpoints:
+          type: array
+          readOnly: true
+          description: Status of each checkpoint in this run
+          items:
+            $ref: '#/components/schemas/PatrolCheckpointRun'
+        currentCheckpointIndex:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Index of current checkpoint (0-based)
+          example: 3
+        route:
+          type: array
+          readOnly: true
+          description: Actual GPS path taken during patrol
+          items:
+            $ref: '#/components/schemas/GeoJSONPoint'
+        notes:
+          type: string
+          maxLength: 5000
+          nullable: true
+          example: Patrol completed without issues. All checkpoints verified.
+        abandonmentReason:
+          type: string
+          maxLength: 1000
+          nullable: true
+          example: Emergency call received
+        completionNotes:
+          type: string
+          maxLength: 2000
+          nullable: true
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - https://cdn.patrolmanager.com/patrols/550e8400-e29b-41d4-a716-446655440008/photo1.jpg
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Supervisor overseeing this patrol
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T07:55:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T08:47:33Z
+
+    PatrolCheckpointRun:
+      type: object
+      description: Status of a checkpoint within a patrol run
+      required:
+        - checkpointId
+        - status
+        - order
+      properties:
+        checkpointId:
+          type: string
+          format: uuid
+        checkpoint:
+          $ref: '#/components/schemas/Checkpoint'
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped, failed]
+          example: completed
+        order:
+          type: integer
+          example: 1
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-23T08:15:22Z
+        verificationMethod:
+          type: string
+          enum: [nfc, qr, gps, manual_override]
+          nullable: true
+          example: nfc
+        location:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+            format: uri
+        timeSpent:
+          type: integer
+          description: Seconds spent at this checkpoint
+          nullable: true
+          example: 45
+        isOnTime:
+          type: boolean
+          readOnly: true
+          description: Whether the checkpoint was verified within time limits
+          example: true
+
+    CreatePatrolRunRequest:
+      type: object
+      required:
+        - templateId
+      properties:
+        templateId:
+          type: string
+          format: uuid
+          description: ID of the patrol template to execute
+        scheduledStart:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the patrol should start (null = immediate)
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          maxLength: 5000
+          nullable: true
+
+    CompletePatrolRunRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Final notes about the patrol
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: URLs to attached photos/files
+
+    AbandonPatrolRunRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Reason for abandoning the patrol
+          example: Emergency situation requiring immediate attention
+
+    PatrolRunListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        templateId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, completed, abandoned, failed, overdue]
+        dateFrom:
+          type: string
+          format: date-time
+          description: Filter runs starting from this date
+        dateTo:
+          type: string
+          format: date-time
+          description: Filter runs ending before this date
+        sortBy:
+          type: string
+          enum: [scheduledStart, actualStart, createdAt, status]
+          default: scheduledStart
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    # ============================================
+    # GPS & VERIFICATION SCHEMAS
+    # ============================================
+    GPSUpdateRequest:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - timestamp
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 40.7128
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: -74.0060
+        timestamp:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:30:00Z
+        accuracy:
+          type: number
+          format: double
+          minimum: 0
+          description: GPS accuracy in meters
+          example: 5.2
+        altitude:
+          type: number
+          format: double
+          nullable: true
+          description: Altitude in meters
+          example: 15.5
+        speed:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Speed in m/s
+          example: 1.5
+        bearing:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          nullable: true
+          description: Bearing in degrees
+          example: 45.0
+        patrolRunId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Associate with active patrol run
+        batteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 75
+        locationSource:
+          type: string
+          enum: [gps, network, passive]
+          description: How location was determined
+          example: gps
+
+    GPSUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        inGeofence:
+          type: boolean
+          description: Whether the location is within the assigned site's geofence
+          example: true
+        nearestCheckpoint:
+          type: object
+          nullable: true
+          description: Nearest checkpoint to current location
+          properties:
+            checkpointId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            distance:
+              type: number
+              format: double
+              description: Distance in meters
+              example: 25.5
+            canVerify:
+              type: boolean
+              description: Whether within tolerance for GPS verification
+              example: false
+
+    VerifyCheckpointRequest:
+      type: object
+      required:
+        - method
+      properties:
+        method:
+          type: string
+          enum: [nfc, qr, gps]
+          description: Verification method used
+        nfcTagId:
+          type: string
+          description: NFC tag ID scanned (required for NFC method)
+          example: 04:A3:5B:C2:D1
+        qrCode:
+          type: string
+          description: QR code scanned (required for QR method)
+          example: CP-main-entrance-001
+        location:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:30:00Z
+        accuracy:
+          type: number
+          format: double
+          minimum: 0
+          example: 5.2
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: Photo evidence URLs
+        patrolRunId:
+          type: string
+          format: uuid
+          description: Patrol run this verification is for
+
+    VerifyCheckpointResponse:
+      type: object
+      required:
+        - success
+        - verified
+      properties:
+        success:
+          type: boolean
+          description: Whether the verification request was processed
+          example: true
+        verified:
+          type: boolean
+          description: Whether the checkpoint was successfully verified
+          example: true
+        verificationMethod:
+          type: string
+          enum: [nfc, qr, gps, manual_override]
+          example: nfc
+        verifiedAt:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:30:15Z
+        distance:
+          type: number
+          format: double
+          nullable: true
+          description: Distance from checkpoint location in meters
+          example: 2.5
+        nextCheckpoint:
+          type: object
+          nullable: true
+          description: Next checkpoint in sequence
+          properties:
+            checkpointId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            order:
+              type: integer
+            location:
+              $ref: '#/components/schemas/GeoJSONPoint'
+        errors:
+          type: array
+          items:
+            type: string
+          description: Verification errors if failed
+          example:
+            - Location accuracy too low (50m)
+
+    GeofenceValidationRequest:
+      type: object
+      required:
+        - siteId
+        - location
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: Site to validate against
+        location:
+          oneOf:
+            - $ref: '#/components/schemas/GeoJSONPoint'
+            - type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+
+    GeofenceValidationResponse:
+      type: object
+      required:
+        - valid
+        - inGeofence
+      properties:
+        valid:
+          type: boolean
+          description: Whether the validation request was valid
+          example: true
+        inGeofence:
+          type: boolean
+          description: Whether the point is within the site's geofence
+          example: true
+        siteId:
+          type: string
+          format: uuid
+        distance:
+          type: number
+          format: double
+          nullable: true
+          description: Distance from geofence boundary in meters (negative = outside)
+          example: 25.5
+        nearestBoundaryPoint:
+          $ref: '#/components/schemas/GeoJSONPoint'
+          nullable: true
+        geofenceType:
+          type: string
+          enum: [polygon, circle]
+          description: Type of geofence used
+          example: polygon
+
+    GPSVerificationRequest:
+      type: object
+      required:
+        - location
+        - accuracy
+      properties:
+        location:
+          oneOf:
+            - $ref: '#/components/schemas/GeoJSONPoint'
+            - type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+        accuracy:
+          type: number
+          format: double
+          minimum: 0
+          description: GPS accuracy in meters
+          example: 5.2
+        timestamp:
+          type: string
+          format: date-time
+          example: 2024-02-23T10:30:00Z
+        tolerance:
+          type: integer
+          minimum: 5
+          maximum: 500
+          description: Override default checkpoint tolerance
+          nullable: true
+
+    # ============================================
+    # INCIDENT SCHEMAS (Enhanced from Phase 1)
+    # ============================================
+    # Incident Schemas (for completeness)
+    Incident:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - status
+        - priority
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Unauthorized entry detected
+        description:
+          type: string
+          example: Unknown individual attempting to access rear entrance
+        status:
+          type: string
+          enum: [new, investigating, resolved, closed]
+          example: new
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        siteId:
+          type: string
+          format: uuid
+        reportedBy:
+          type: string
+          format: uuid
+        assignedTo:
+          type: string
+          format: uuid
+          nullable: true
+        evidence:
+          type: array
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # Incident Schemas (for completeness)
+    Incident:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - status
+        - priority
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Unauthorized entry detected
+        description:
+          type: string
+          example: Unknown individual attempting to access rear entrance
+        status:
+          type: string
+          enum: [new, investigating, resolved, closed]
+          example: new
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        siteId:
+          type: string
+          format: uuid
+        reportedBy:
+          type: string
+          format: uuid
+        assignedTo:
+          type: string
+          format: uuid
+          nullable: true
+        evidence:
+          type: array
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+  # ============================================
+  # ERROR CODES REFERENCE
+  # ============================================
+  ErrorCodes:
+    type: object
+    description: |
+      ## Authentication Errors (AUTH_xxx)
+      - AUTH_001: Invalid credentials
+      - AUTH_002: Account not found
+      - AUTH_003: Account is inactive
+      - AUTH_004: Account is suspended
+      - AUTH_005: Invalid or expired token
+      - AUTH_006: Token refresh failed
+      - AUTH_007: Invalid password reset token
+      - AUTH_008: Password already used
+      - AUTH_009: Too many login attempts
+
+      ## Validation Errors (VAL_xxx)
+      - VAL_001: Required field missing
+      - VAL_002: Invalid email format
+      - VAL_003: Invalid password format
+      - VAL_004: Invalid phone number format
+      - VAL_005: Invalid UUID format
+      - VAL_006: Invalid enum value
+      - VAL_007: Value out of range
+      - VAL_008: Duplicate value exists
+
+      ## Authorization Errors (AUTHZ_xxx)
+      - AUTHZ_001: Insufficient permissions
+      - AUTHZ_002: Resource access denied
+      - AUTHZ_003: Action not allowed for user role
+
+      ## Resource Errors (RES_xxx)
+      - RES_001: Resource not found
+      - RES_002: Resource already exists
+      - RES_003: Resource is locked
+      - RES_004: Resource has dependencies
+
+      ## Rate Limiting (RATE_xxx)
+      - RATE_001: Rate limit exceeded
+      - RATE_002: Too many requests
+
+      ## Server Errors (SRV_xxx)
+      - SRV_001: Internal server error
+      - SRV_002: Database error
+      - SRV_003: External service unavailable
+      - SRV_004: File upload failed
+
+# ============================================
+# PATHS / ENDPOINTS
+# ============================================
+paths:
+  # ============================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: |
+        Register a new user account. **Admin only** endpoint.
+
+        **Rate Limit:** 10 requests per minute per IP
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: VAL_001
+                  message: Required field missing
+                  details: { field: 'email' }
+                timestamp: 2024-02-23T10:00:00Z
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RES_002
+                  message: User with this email already exists
+                  details: {}
+                timestamp: 2024-02-23T10:00:00Z
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate user and return session/JWT token.
+
+        **Behavior:**
+        - **mobile clientType**: Returns JWT access and refresh tokens
+        - **web clientType**: Sets session cookie (HttpOnly, Secure)
+
+        **Rate Limit:** 10 requests per minute per IP
+        **Auth Required:** No
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Session cookie (web only)
+              schema:
+                type: string
+                example: connect.sid=s%3A...; Path=/; HttpOnly; Secure; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: AUTH_001
+                  message: Invalid credentials
+                  details: {}
+                timestamp: 2024-02-23T10:00:00Z
+        '403':
+          description: Account suspended or inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: AUTH_004
+                  message: Account is suspended
+                  details: { reason: 'Contact administrator' }
+                timestamp: 2024-02-23T10:00:00Z
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: |
+        Logout user and invalidate session/token.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: |
+        Exchange refresh token for new access token.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** No (valid refresh token required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      expiresIn:
+                        type: integer
+                        example: 3600
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: AUTH_006
+                  message: Invalid or expired refresh token
+                  details: {}
+                timestamp: 2024-02-23T10:00:00Z
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: |
+        Send password reset email with token.
+
+        **Rate Limit:** 10 requests per minute per IP
+        **Auth Required:** No
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 for security)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: If an account exists with this email, a password reset link will be sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      description: |
+        Reset user password using token from email.
+
+        **Rate Limit:** 10 requests per minute per IP
+        **Auth Required:** No (valid reset token required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: AUTH_007
+                  message: Invalid or expired reset token
+                  details: {}
+                timestamp: 2024-02-23T10:00:00Z
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      description: |
+        Change authenticated user's password.
+
+        **Rate Limit:** 20 requests per hour per user
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+          description: Current password is incorrect
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: |
+        Get authenticated user's profile information.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # USER MANAGEMENT ENDPOINTS
+  # ============================================
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      description: |
+        Get paginated list of users with filtering and sorting.
+
+        **Access Control:**
+        - Admin: Can view all users
+        - Manager: Can view guards, supervisors, and managers
+        - Supervisor: Can view assigned guards only
+        - Guard: View not allowed
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, manager, supervisor, guard]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended, on_leave]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in name, email, employee ID
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by assigned site
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [firstName, lastName, email, createdAt, lastLoginAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags:
+        - Users
+      summary: Create user
+      description: |
+        Create a new user account. **Admin only**.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RES_002
+                  message: User with this email already exists
+                  details: {}
+                timestamp: 2024-02-23T10:00:00Z
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: |
+        Get detailed information about a specific user.
+
+        **Access Control:**
+        - Admin: Can view any user
+        - Manager: Can view guards, supervisors, and managers
+        - Supervisor: Can view assigned guards
+        - Guard: Can only view own profile
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: |
+        Update user information.
+
+        **Access Control:**
+        - Admin: Can update any user
+        - Manager: Can update guards and supervisors
+        - Supervisor: Can update assigned guards
+        - Guard: Can only update own profile (firstName, lastName, phone)
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags:
+        - Users
+      summary: Soft delete user
+      description: |
+        Soft delete user account (sets status to inactive). **Admin only**.
+
+        User data is retained but cannot access the system.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deleted successfully
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/{id}/role:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+
+    put:
+      tags:
+        - Users
+      summary: Change user role
+      description: |
+        Change a user's role. **Admin only**.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRoleRequest'
+      responses:
+        '200':
+          description: User role changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/{id}/status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+
+    put:
+      tags:
+        - Users
+      summary: Change user status
+      description: |
+        Change a user's account status.
+
+        **Access Control:**
+        - Admin: Can change any user's status
+        - Manager: Can change guard/supervisor status (except suspension)
+        - Supervisor: Cannot change status
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeStatusRequest'
+      responses:
+        '200':
+          description: User status changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/{id}/suspend:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+
+    put:
+      tags:
+        - Users
+      summary: Suspend user
+      description: |
+        Suspend a user account. The user will not be able to access the system.
+
+        **Access Control:**
+        - Admin: Can suspend any user
+        - Manager: Can suspend guards and supervisors
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for suspension
+                  maxLength: 500
+                  example: Policy violation - unauthorized site access
+      responses:
+        '200':
+          description: User suspended successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/{id}/reactivate:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+
+    put:
+      tags:
+        - Users
+      summary: Reactivate user
+      description: |
+        Reactivate a suspended or inactive user account.
+
+        **Access Control:**
+        - Admin: Can reactivate any user
+        - Manager: Can reactivate guards and supervisors
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User reactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/stats:
+    get:
+      tags:
+        - Users
+      summary: Get user statistics
+      description: |
+        Get aggregate statistics about users in the system.
+
+        **Access Control:**
+        - Admin: Can view all statistics
+        - Manager: Can view statistics for their sites
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 150
+                      byRole:
+                        type: object
+                        properties:
+                          admin:
+                            type: integer
+                            example: 5
+                          manager:
+                            type: integer
+                            example: 15
+                          supervisor:
+                            type: integer
+                            example: 30
+                          guard:
+                            type: integer
+                            example: 100
+                      byStatus:
+                        type: object
+                        properties:
+                          active:
+                            type: integer
+                            example: 120
+                          inactive:
+                            type: integer
+                            example: 10
+                          suspended:
+                            type: integer
+                            example: 15
+                          on_leave:
+                            type: integer
+                            example: 5
+                      newThisMonth:
+                        type: integer
+                        example: 8
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /users/search:
+    get:
+      tags:
+        - Users
+      summary: Search users
+      description: |
+        Search for users by name, email, or employee ID.
+
+        **Access Control:**
+        - Admin: Can search all users
+        - Manager: Can search guards and supervisors
+        - Supervisor: Can search assigned guards
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          description: Search query (name, email, or employee ID)
+          example: john
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Maximum number of results
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/logout-all:
+    post:
+      tags:
+        - Authentication
+      summary: Logout from all devices
+      description: |
+        Invalidate all sessions/tokens for the current user across all devices.
+
+        **Rate Limit:** 20 requests per hour per user
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logged out from all devices successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out from all devices successfully
+                  data:
+                    type: object
+                    properties:
+                      devicesSignedOut:
+                        type: integer
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # ROLE & PERMISSION ENDPOINTS
+  # ============================================
+  /roles:
+    get:
+      tags:
+        - Roles
+      summary: List all roles
+      description: |
+        Get list of all available roles with descriptions.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [admin, manager, supervisor, guard]
+        description: Role ID
+
+    get:
+      tags:
+        - Roles
+      summary: Get role with permissions
+      description: |
+        Get detailed role information including all permissions.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Role retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RoleWithPermissions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /permissions:
+    get:
+      tags:
+        - Roles
+      summary: List all permissions
+      description: |
+        Get list of all available permissions in the system.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/summaries:
+    get:
+      tags:
+        - Roles
+      summary: Get role summaries
+      description: |
+        Get brief summaries of all roles for UI display (dropdowns, selects).
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Role summaries retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: guard
+                        name:
+                          type: string
+                          example: Guard
+                        level:
+                          type: integer
+                          example: 25
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/system:
+    get:
+      tags:
+        - Roles
+      summary: Get system roles
+      description: |
+        Get all predefined system roles (admin, manager, supervisor, guard).
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: System roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/custom:
+    get:
+      tags:
+        - Roles
+      summary: Get custom roles
+      description: |
+        Get all custom roles created by the organization.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Custom roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/compare:
+    get:
+      tags:
+        - Roles
+      summary: Compare roles
+      description: |
+        Compare two roles by their hierarchy level to determine which has higher authority.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: role1
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [admin, manager, supervisor, guard]
+          description: First role to compare
+        - name: role2
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [admin, manager, supervisor, guard]
+          description: Second role to compare
+      responses:
+        '200':
+          description: Roles compared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      role1:
+                        type: string
+                        example: supervisor
+                      role2:
+                        type: string
+                        example: guard
+                      role1Level:
+                        type: integer
+                        example: 50
+                      role2Level:
+                        type: integer
+                        example: 25
+                      comparison:
+                        type: string
+                        enum: [greater, less, equal]
+                        example: greater
+                      canManage:
+                        type: boolean
+                        description: Whether role1 can manage role2
+                        example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/{id}/permissions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [admin, manager, supervisor, guard]
+        description: Role ID
+
+    get:
+      tags:
+        - Roles
+      summary: Get role permissions
+      description: |
+        Get all permissions assigned to a specific role.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Role permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      role:
+                        $ref: '#/components/schemas/Role'
+                      permissions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Permission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/{id}/hierarchy:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [admin, manager, supervisor, guard]
+        description: Role ID
+
+    get:
+      tags:
+        - Roles
+      summary: Get role hierarchy
+      description: |
+        Get hierarchy information for a role, including roles it can manage and roles that can manage it.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Role hierarchy retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      role:
+                        $ref: '#/components/schemas/Role'
+                      canManage:
+                        type: array
+                        description: Roles that this role can manage
+                        items:
+                          type: string
+                          enum: [admin, manager, supervisor, guard]
+                        example: ["supervisor", "guard"]
+                      managedBy:
+                        type: array
+                        description: Roles that can manage this role
+                        items:
+                          type: string
+                          enum: [admin, manager, supervisor, guard]
+                        example: ["admin", "manager"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /roles/{id}/users:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [admin, manager, supervisor, guard]
+        description: Role ID
+
+    get:
+      tags:
+        - Roles
+      summary: Get users with role
+      description: |
+        Get all users that have a specific role.
+
+        **Access Control:**
+        - Admin: Can view all roles
+        - Manager: Can view supervisor and guard roles
+        - Supervisor: Can view guard role only
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Users with role retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /permissions/check:
+    get:
+      tags:
+        - Roles
+      summary: Check permission
+      description: |
+        Check if the current user has a specific permission.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: permission
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Permission to check (e.g., "users.create", "patrols.view")
+            example: users.create
+      responses:
+        '200':
+          description: Permission check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      permission:
+                        type: string
+                        example: users.create
+                      hasPermission:
+                        type: boolean
+                        example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # SITE MANAGEMENT ENDPOINTS
+  # ============================================
+  /sites:
+    get:
+      tags:
+        - Sites
+      summary: List sites
+      description: |
+        Get paginated list of sites with filtering and sorting.
+
+        **Access Control:**
+        - Admin: Can view all sites
+        - Manager: Can view assigned sites
+        - Supervisor: Can view assigned sites
+        - Guard: Can view assigned sites only
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [commercial, residential, industrial, mixed_use, government, educational, healthcare, retail, other]
+        - name: clientId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in name, address
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Sites retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags:
+        - Sites
+      summary: Create site
+      description: |
+        Create a new site with geofence configuration.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin or Manager role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '201':
+          description: Site created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /sites/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Site ID
+
+    get:
+      tags:
+        - Sites
+      summary: Get site by ID
+      description: |
+        Get detailed information about a specific site including geofence.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Site retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    put:
+      tags:
+        - Sites
+      summary: Update site
+      description: |
+        Update site information and geofence.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Site updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags:
+        - Sites
+      summary: Delete site
+      description: |
+        Delete a site. **Admin only**.
+
+        Site cannot be deleted if it has active checkpoints or assigned guards.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Site deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Site deleted successfully
+        '400':
+          description: Site cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RES_004
+                  message: Site has dependencies
+                  details: { activeCheckpoints: 12, assignedGuards: 5 }
+                timestamp: 2024-02-23T10:00:00Z
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /sites/{id}/checkpoints:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Site ID
+
+    get:
+      tags:
+        - Sites
+        - Checkpoints
+      summary: Get site checkpoints
+      description: |
+        Get all checkpoints for a specific site.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [nfc, qr, gps]
+      responses:
+        '200':
+          description: Checkpoints retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Checkpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # CHECKPOINT MANAGEMENT ENDPOINTS
+  # ============================================
+  /checkpoints:
+    get:
+      tags:
+        - Checkpoints
+      summary: List checkpoints
+      description: |
+        Get paginated list of checkpoints with filtering.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [nfc, qr, gps]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, order, createdAt, updatedAt]
+            default: order
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Checkpoints retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Checkpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags:
+        - Checkpoints
+      summary: Create checkpoint
+      description: |
+        Create a new checkpoint at a site.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin or Manager role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckpointRequest'
+      responses:
+        '201':
+          description: Checkpoint created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Checkpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /checkpoints/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Checkpoint ID
+
+    get:
+      tags:
+        - Checkpoints
+      summary: Get checkpoint by ID
+      description: |
+        Get detailed information about a specific checkpoint.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Checkpoint retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Checkpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    put:
+      tags:
+        - Checkpoints
+      summary: Update checkpoint
+      description: |
+        Update checkpoint information.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCheckpointRequest'
+      responses:
+        '200':
+          description: Checkpoint updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Checkpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags:
+        - Checkpoints
+      summary: Delete checkpoint
+      description: |
+        Delete a checkpoint. **Admin only**.
+
+        Checkpoint cannot be deleted if it's part of an active patrol template.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Checkpoint deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Checkpoint deleted successfully
+        '400':
+          description: Checkpoint cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RES_004
+                  message: Checkpoint is in use
+                  details: { activeTemplates: 3 }
+                timestamp: 2024-02-23T10:00:00Z
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /checkpoints/{id}/generate-qr:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Checkpoint ID
+
+    post:
+      tags:
+        - Checkpoints
+      summary: Generate QR code
+      description: |
+        Generate a QR code for a checkpoint. Returns the QR code string and image URL.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin or Manager role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateQRCodeRequest'
+      responses:
+        '200':
+          description: QR code generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QRCodeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /checkpoints/{id}/verify:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Checkpoint ID
+
+    post:
+      tags:
+        - Checkpoints
+      summary: Verify checkpoint
+      description: |
+        Verify a checkpoint using NFC, QR, or GPS.
+
+        Used by guards during patrol runs to mark checkpoints as complete.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes (Guard role)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCheckpointRequest'
+      responses:
+        '200':
+          description: Checkpoint verification processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VerifyCheckpointResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /checkpoints/{id}/verify/gps:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Checkpoint ID
+
+    post:
+      tags:
+        - Checkpoints
+      summary: GPS-based verification
+      description: |
+        Verify checkpoint using GPS location only.
+
+        Used for GPS-type checkpoints or when NFC/QR is unavailable.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes (Guard role)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GPSVerificationRequest'
+      responses:
+        '200':
+          description: GPS verification processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VerifyCheckpointResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # PATROL TEMPLATE MANAGEMENT ENDPOINTS
+  # ============================================
+  /patrol-templates:
+    get:
+      tags:
+        - Patrols
+      summary: List patrol templates
+      description: |
+        Get paginated list of patrol templates with filtering.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, draft]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, on_demand, incident_response]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Patrol templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags:
+        - Patrols
+      summary: Create patrol template
+      description: |
+        Create a new patrol template with checkpoints.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin or Manager role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatrolTemplateRequest'
+      responses:
+        '201':
+          description: Patrol template created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-templates/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Template ID
+
+    get:
+      tags:
+        - Patrols
+      summary: Get patrol template by ID
+      description: |
+        Get detailed information about a patrol template including all checkpoints.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Patrol template retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    put:
+      tags:
+        - Patrols
+      summary: Update patrol template
+      description: |
+        Update patrol template information (excluding checkpoints).
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatrolTemplateRequest'
+      responses:
+        '200':
+          description: Patrol template updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags:
+        - Patrols
+      summary: Delete patrol template
+      description: |
+        Delete a patrol template. **Admin only**.
+
+        Template cannot be deleted if there are active or scheduled patrol runs.
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes (Admin role)
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Patrol template deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Patrol template deleted successfully
+        '400':
+          description: Template cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RES_004
+                  message: Template has active runs
+                  details: { activeRuns: 3, scheduledRuns: 5 }
+                timestamp: 2024-02-23T10:00:00Z
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-templates/{id}/checkpoints:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Template ID
+
+    post:
+      tags:
+        - Patrols
+      summary: Add checkpoint to template
+      description: |
+        Add a checkpoint to a patrol template at a specific position.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCheckpointToTemplateRequest'
+      responses:
+        '200':
+          description: Checkpoint added to template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-templates/{templateId}/checkpoints/{checkpointId}:
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Template ID
+      - name: checkpointId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Checkpoint ID
+
+    put:
+      tags:
+        - Patrols
+      summary: Update checkpoint in template
+      description: |
+        Update checkpoint configuration within a template (order, time limit, requirements).
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCheckpointInTemplateRequest'
+      responses:
+        '200':
+          description: Checkpoint updated in template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags:
+        - Patrols
+      summary: Remove checkpoint from template
+      description: |
+        Remove a checkpoint from a patrol template.
+
+        **Access Control:** Admin and Manager only
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Checkpoint removed from template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # PATROL RUN MANAGEMENT ENDPOINTS
+  # ============================================
+  /patrol-runs:
+    get:
+      tags:
+        - Patrols
+      summary: List patrol runs
+      description: |
+        Get paginated list of patrol runs with filtering.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: templateId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: guardId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, abandoned, failed, overdue]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [scheduledStart, actualStart, createdAt, status]
+            default: scheduledStart
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Patrol runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PatrolRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags:
+        - Patrols
+      summary: Start patrol run
+      description: |
+        Create and start a new patrol run from a template.
+
+        **Access Control:** Guards can start for themselves, Supervisors can start for their guards
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatrolRunRequest'
+      responses:
+        '201':
+          description: Patrol run started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-runs/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Run ID
+
+    get:
+      tags:
+        - Patrols
+      summary: Get patrol run details
+      description: |
+        Get detailed information about a patrol run including checkpoint progress.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Patrol run retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-runs/{id}/complete:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Run ID
+
+    put:
+      tags:
+        - Patrols
+      summary: Complete patrol run
+      description: |
+        Mark a patrol run as completed.
+
+        **Access Control:** Assigned guard or supervisor
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletePatrolRunRequest'
+      responses:
+        '200':
+          description: Patrol run completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-runs/{id}/abandon:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Run ID
+
+    put:
+      tags:
+        - Patrols
+      summary: Abandon patrol run
+      description: |
+        Abandon an in-progress patrol run. Requires a reason.
+
+        **Access Control:** Assigned guard or supervisor
+
+        **Rate Limit:** 100 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbandonPatrolRunRequest'
+      responses:
+        '200':
+          description: Patrol run abandoned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatrolRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /patrol-runs/{id}/checkpoints:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Patrol Run ID
+
+    get:
+      tags:
+        - Patrols
+      summary: Get patrol run checkpoints
+      description: |
+        Get the status of all checkpoints in a patrol run.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Checkpoint status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PatrolCheckpointRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================
+  # GPS & LOCATION ENDPOINTS
+  # ============================================
+  /gps/update:
+    post:
+      tags:
+        - Patrols
+      summary: Submit GPS location update
+      description: |
+        Submit a GPS location update from a mobile client.
+
+        Used for real-time tracking of guards during active shifts/patrols.
+
+        **Rate Limit:** 60 requests per minute per user
+        **Auth Required:** Yes (Guard role)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GPSUpdateRequest'
+      responses:
+        '200':
+          description: Location update processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GPSUpdateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /geofence/validate:
+    post:
+      tags:
+        - Patrols
+      summary: Validate geofence
+      description: |
+        Check if a GPS point is within a site's geofence.
+
+        Used for clock-in/clock-out validation and patrol verification.
+
+        **Rate Limit:** 1000 requests per 15 minutes
+        **Auth Required:** Yes
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeofenceValidationRequest'
+      responses:
+        '200':
+          description: Geofence validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GeofenceValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+# ============================================
+# COMMON RESPONSES
+# ============================================
+components:
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VAL_001
+              message: Required field missing
+              details: { field: 'email' }
+            timestamp: 2024-02-23T10:00:00Z
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: AUTH_005
+              message: Invalid or expired token
+              details: {}
+            timestamp: 2024-02-23T10:00:00Z
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: AUTHZ_001
+              message: Insufficient permissions
+              details: { required: 'admin' }
+            timestamp: 2024-02-23T10:00:00Z
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RES_001
+              message: Resource not found
+              details: { resource: 'User', id: '550e8400-e29b-41d4-a716-446655440000' }
+            timestamp: 2024-02-23T10:00:00Z
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until retry is allowed
+          schema:
+            type: integer
+            example: 60
+        X-RateLimit-Limit:
+          description: Rate limit quota
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Remaining requests
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Unix timestamp when quota resets
+          schema:
+            type: integer
+            example: 1708694400
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_001
+              message: Rate limit exceeded
+              details: { retryAfter: 60 }
+            timestamp: 2024-02-23T10:00:00Z

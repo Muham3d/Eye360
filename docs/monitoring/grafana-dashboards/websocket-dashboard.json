@@ -1,0 +1,98 @@
+{
+  "dashboard": {
+    "title": "PatrolManager WebSocket Dashboard",
+    "tags": ["patrolmanager", "websocket", "realtime"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Connections",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(patrolmanager_websocket_active_connections)",
+            "legendFormat": "Total Connections"
+          },
+          {
+            "expr": "sum(patrolmanager_websocket_active_connections{user_role=\"guard\"})",
+            "legendFormat": "Guards"
+          },
+          {
+            "expr": "sum(patrolmanager_websocket_active_connections{user_role=\"supervisor\"})",
+            "legendFormat": "Supervisors"
+          },
+          {
+            "expr": "sum(patrolmanager_websocket_active_connections{user_role=\"admin\"})",
+            "legendFormat": "Admins"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Messages Per Second",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_websocket_messages_received_total[1m])",
+            "legendFormat": "Received - {{event_type}}"
+          },
+          {
+            "expr": "rate(patrolmanager_websocket_messages_sent_total[1m])",
+            "legendFormat": "Sent - {{event_type}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "PTT Active Sessions",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 8, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "patrolmanager_websocket_ptt_active_count",
+            "legendFormat": "Active Sessions"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Location Updates/sec",
+        "type": "graph",
+        "gridPos": { "x": 8, "y": 8, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_websocket_messages_received_total{event_type=\"location:update\"}[1m])",
+            "legendFormat": "GPS Updates"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "SOS Alerts/sec",
+        "type": "graph",
+        "gridPos": { "x": 16, "y": 8, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_websocket_messages_received_total{event_type=\"sos:triggered\"}[1m])",
+            "legendFormat": "SOS Events"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Message Type Distribution (5m)",
+        "type": "piechart",
+        "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (event_type) (increase(patrolmanager_websocket_messages_received_total[5m]))",
+            "legendFormat": "{{event_type}}"
+          }
+        ]
+      }
+    ]
+  }
+}

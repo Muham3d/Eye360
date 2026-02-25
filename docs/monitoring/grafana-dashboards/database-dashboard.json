@@ -1,0 +1,82 @@
+{
+  "dashboard": {
+    "title": "PatrolManager Database Dashboard",
+    "tags": ["patrolmanager", "database", "postgresql"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Query Duration (p95)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(patrolmanager_db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{table}} - {{operation}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Connection Pool",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "patrolmanager_db_connection_pool_size",
+            "legendFormat": "{{type}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Query Errors/sec",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_db_query_errors_total[5m])",
+            "legendFormat": "{{table}} - {{operation}} - {{error_type}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Slow Queries (>1s)",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "sum(rate(patrolmanager_db_query_duration_seconds_bucket{le=\"+Inf\"}[5m])) - sum(rate(patrolmanager_db_query_duration_seconds_bucket{le=\"1\"}[5m]))",
+            "legendFormat": "Slow Queries"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "gauge",
+        "gridPos": { "x": 18, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "patrolmanager_db_connection_pool_size{type=\"active\"}",
+            "legendFormat": "Active"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Query Performance by Table",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(patrolmanager_db_query_duration_seconds_sum[5m]) by (table, operation)",
+            "legendFormat": "{{table}} - {{operation}}"
+          }
+        ]
+      }
+    ]
+  }
+}

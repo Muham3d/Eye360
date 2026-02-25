@@ -1,0 +1,19 @@
+{
+  "watch": ["src"],
+  "ext": "js,ts,json",
+  "ignore": [
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "coverage",
+    "node_modules",
+    "dist"
+  ],
+  "exec": "node --import tsx/esm ./src/server.ts",
+  "env": {
+    "NODE_ENV": "development",
+    "USE_SQLITE": "true"
+  },
+  "delay": 1000,
+  "verbose": false,
+  "colours": true
+}

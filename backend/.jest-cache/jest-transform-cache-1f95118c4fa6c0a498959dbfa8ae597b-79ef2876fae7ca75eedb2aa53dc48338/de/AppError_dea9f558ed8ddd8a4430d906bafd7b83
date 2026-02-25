@@ -1,0 +1,55 @@
+569841b38c020ca43e8be3f731ae7112
+"use strict";
+/**
+ * Base Application Error
+ *
+ * Custom error class that serves as the base for all application errors.
+ * Includes status code and operational flag for proper error handling.
+ *
+ * @module core/domain/errors
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AppError = void 0;
+/**
+ * Base application error class
+ * All custom errors should extend this class
+ */
+class AppError extends Error {
+    constructor(message, statusCode = 500, type = 'INTERNAL_ERROR', isOperational = true, context, originalError) {
+        super(message);
+        // Maintains proper stack trace for where our error was thrown (only available on V8)
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, AppError);
+        }
+        this.name = this.constructor.name;
+        this.statusCode = statusCode;
+        this.type = type;
+        this.isOperational = isOperational;
+        this.context = context;
+        this.originalError = originalError;
+    }
+    /**
+     * Convert error to JSON for API response
+     */
+    toJSON() {
+        return {
+            name: this.name,
+            type: this.type,
+            message: this.message,
+            statusCode: this.statusCode,
+            ...(this.context && { context: this.context }),
+            ...(process.env.NODE_ENV === 'development' && {
+                stack: this.stack,
+                originalError: this.originalError?.message,
+            }),
+        };
+    }
+    /**
+     * Check if error is operational
+     */
+    isOperationalError() {
+        return this.isOperational;
+    }
+}
+exports.AppError = AppError;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXFVzZXJzXFxNb2hhbWVkXFxEZXNrdG9wXFxQcm9qZWN0c1xcUGF0cm9sTWFuYWdlclxcYmFja2VuZFxcc3JjXFxjb3JlXFxkb21haW5cXGVycm9yc1xcQXBwRXJyb3IudHMiLCJtYXBwaW5ncyI6IjtBQUFBOzs7Ozs7O0dBT0c7OztBQUVIOzs7R0FHRztBQUNILE1BQWEsUUFBUyxTQUFRLEtBQUs7SUEwQmpDLFlBQ0UsT0FBZSxFQUNmLGFBQXFCLEdBQUcsRUFDeEIsT0FBZSxnQkFBZ0IsRUFDL0IsZ0JBQXlCLElBQUksRUFDN0IsT0FBaUMsRUFDakMsYUFBcUI7UUFFckIsS0FBSyxDQUFDLE9BQU8sQ0FBQyxDQUFDO1FBRWYscUZBQXFGO1FBQ3JGLElBQUksS0FBSyxDQUFDLGlCQUFpQixFQUFFLENBQUM7WUFDNUIsS0FBSyxDQUFDLGlCQUFpQixDQUFDLElBQUksRUFBRSxRQUFRLENBQUMsQ0FBQztRQUMxQyxDQUFDO1FBRUQsSUFBSSxDQUFDLElBQUksR0FBRyxJQUFJLENBQUMsV0FBVyxDQUFDLElBQUksQ0FBQztRQUNsQyxJQUFJLENBQUMsVUFBVSxHQUFHLFVBQVUsQ0FBQztRQUM3QixJQUFJLENBQUMsSUFBSSxHQUFHLElBQUksQ0FBQztRQUNqQixJQUFJLENBQUMsYUFBYSxHQUFHLGFBQWEsQ0FBQztRQUNuQyxJQUFJLENBQUMsT0FBTyxHQUFHLE9BQU8sQ0FBQztRQUN2QixJQUFJLENBQUMsYUFBYSxHQUFHLGFBQWEsQ0FBQztJQUNyQyxDQUFDO0lBRUQ7O09BRUc7SUFDSCxNQUFNO1FBQ0osT0FBTztZQUNMLElBQUksRUFBRSxJQUFJLENBQUMsSUFBSTtZQUNmLElBQUksRUFBRSxJQUFJLENBQUMsSUFBSTtZQUNmLE9BQU8sRUFBRSxJQUFJLENBQUMsT0FBTztZQUNyQixVQUFVLEVBQUUsSUFBSSxDQUFDLFVBQVU7WUFDM0IsR0FBRyxDQUFDLElBQUksQ0FBQyxPQUFPLElBQUksRUFBRSxPQUFPLEVBQUUsSUFBSSxDQUFDLE9BQU8sRUFBRSxDQUFDO1lBQzlDLEdBQUcsQ0FBQyxPQUFPLENBQUMsR0FBRyxDQUFDLFFBQVEsS0FBSyxhQUFhLElBQUk7Z0JBQzVDLEtBQUssRUFBRSxJQUFJLENBQUMsS0FBSztnQkFDakIsYUFBYSxFQUFFLElBQUksQ0FBQyxhQUFhLEVBQUUsT0FBTzthQUMzQyxDQUFDO1NBQ0gsQ0FBQztJQUNKLENBQUM7SUFFRDs7T0FFRztJQUNILGtCQUFrQjtRQUNoQixPQUFPLElBQUksQ0FBQyxhQUFhLENBQUM7SUFDNUIsQ0FBQztDQUNGO0FBeEVELDRCQXdFQyIsIm5hbWVzIjpbXSwic291cmNlcyI6WyJDOlxcVXNlcnNcXE1vaGFtZWRcXERlc2t0b3BcXFByb2plY3RzXFxQYXRyb2xNYW5hZ2VyXFxiYWNrZW5kXFxzcmNcXGNvcmVcXGRvbWFpblxcZXJyb3JzXFxBcHBFcnJvci50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIEJhc2UgQXBwbGljYXRpb24gRXJyb3JcbiAqXG4gKiBDdXN0b20gZXJyb3IgY2xhc3MgdGhhdCBzZXJ2ZXMgYXMgdGhlIGJhc2UgZm9yIGFsbCBhcHBsaWNhdGlvbiBlcnJvcnMuXG4gKiBJbmNsdWRlcyBzdGF0dXMgY29kZSBhbmQgb3BlcmF0aW9uYWwgZmxhZyBmb3IgcHJvcGVyIGVycm9yIGhhbmRsaW5nLlxuICpcbiAqIEBtb2R1bGUgY29yZS9kb21haW4vZXJyb3JzXG4gKi9cblxuLyoqXG4gKiBCYXNlIGFwcGxpY2F0aW9uIGVycm9yIGNsYXNzXG4gKiBBbGwgY3VzdG9tIGVycm9ycyBzaG91bGQgZXh0ZW5kIHRoaXMgY2xhc3NcbiAqL1xuZXhwb3J0IGNsYXNzIEFwcEVycm9yIGV4dGVuZHMgRXJyb3Ige1xuICAvKipcbiAgICogSFRUUCBzdGF0dXMgY29kZVxuICAgKi9cbiAgcHVibGljIHJlYWRvbmx5IHN0YXR1c0NvZGU6IG51bWJlcjtcblxuICAvKipcbiAgICogRXJyb3IgdHlwZS9jb2RlIGZvciBjbGllbnQgaGFuZGxpbmdcbiAgICovXG4gIHB1YmxpYyByZWFkb25seSB0eXBlOiBzdHJpbmc7XG5cbiAgLyoqXG4gICAqIFdoZXRoZXIgdGhpcyBlcnJvciBpcyBvcGVyYXRpb25hbCAoZXhwZWN0ZWQpIHZzIHByb2dyYW1taW5nIGVycm9yXG4gICAqL1xuICBwdWJsaWMgcmVhZG9ubHkgaXNPcGVyYXRpb25hbDogYm9vbGVhbjtcblxuICAvKipcbiAgICogQWRkaXRpb25hbCBlcnJvciBjb250ZXh0XG4gICAqL1xuICBwdWJsaWMgcmVhZG9ubHkgY29udGV4dD86IFJlY29yZDxzdHJpbmcsIHVua25vd24+O1xuXG4gIC8qKlxuICAgKiBPcmlnaW5hbCBlcnJvciB0aGF0IGNhdXNlZCB0aGlzIGVycm9yXG4gICAqL1xuICBwdWJsaWMgcmVhZG9ubHkgb3JpZ2luYWxFcnJvcj86IEVycm9yO1xuXG4gIGNvbnN0cnVjdG9yKFxuICAgIG1lc3NhZ2U6IHN0cmluZyxcbiAgICBzdGF0dXNDb2RlOiBudW1iZXIgPSA1MDAsXG4gICAgdHlwZTogc3RyaW5nID0gJ0lOVEVSTkFMX0VSUk9SJyxcbiAgICBpc09wZXJhdGlvbmFsOiBib29sZWFuID0gdHJ1ZSxcbiAgICBjb250ZXh0PzogUmVjb3JkPHN0cmluZywgdW5rbm93bj4sXG4gICAgb3JpZ2luYWxFcnJvcj86IEVycm9yXG4gICkge1xuICAgIHN1cGVyKG1lc3NhZ2UpO1xuXG4gICAgLy8gTWFpbnRhaW5zIHByb3BlciBzdGFjayB0cmFjZSBmb3Igd2hlcmUgb3VyIGVycm9yIHdhcyB0aHJvd24gKG9ubHkgYXZhaWxhYmxlIG9uIFY4KVxuICAgIGlmIChFcnJvci5jYXB0dXJlU3RhY2tUcmFjZSkge1xuICAgICAgRXJyb3IuY2FwdHVyZVN0YWNrVHJhY2UodGhpcywgQXBwRXJyb3IpO1xuICAgIH1cblxuICAgIHRoaXMubmFtZSA9IHRoaXMuY29uc3RydWN0b3IubmFtZTtcbiAgICB0aGlzLnN0YXR1c0NvZGUgPSBzdGF0dXNDb2RlO1xuICAgIHRoaXMudHlwZSA9IHR5cGU7XG4gICAgdGhpcy5pc09wZXJhdGlvbmFsID0gaXNPcGVyYXRpb25hbDtcbiAgICB0aGlzLmNvbnRleHQgPSBjb250ZXh0O1xuICAgIHRoaXMub3JpZ2luYWxFcnJvciA9IG9yaWdpbmFsRXJyb3I7XG4gIH1cblxuICAvKipcbiAgICogQ29udmVydCBlcnJvciB0byBKU09OIGZvciBBUEkgcmVzcG9uc2VcbiAgICovXG4gIHRvSlNPTigpOiBSZWNvcmQ8c3RyaW5nLCB1bmtub3duPiB7XG4gICAgcmV0dXJuIHtcbiAgICAgIG5hbWU6IHRoaXMubmFtZSxcbiAgICAgIHR5cGU6IHRoaXMudHlwZSxcbiAgICAgIG1lc3NhZ2U6IHRoaXMubWVzc2FnZSxcbiAgICAgIHN0YXR1c0NvZGU6IHRoaXMuc3RhdHVzQ29kZSxcbiAgICAgIC4uLih0aGlzLmNvbnRleHQgJiYgeyBjb250ZXh0OiB0aGlzLmNvbnRleHQgfSksXG4gICAgICAuLi4ocHJvY2Vzcy5lbnYuTk9ERV9FTlYgPT09ICdkZXZlbG9wbWVudCcgJiYge1xuICAgICAgICBzdGFjazogdGhpcy5zdGFjayxcbiAgICAgICAgb3JpZ2luYWxFcnJvcjogdGhpcy5vcmlnaW5hbEVycm9yPy5tZXNzYWdlLFxuICAgICAgfSksXG4gICAgfTtcbiAgfVxuXG4gIC8qKlxuICAgKiBDaGVjayBpZiBlcnJvciBpcyBvcGVyYXRpb25hbFxuICAgKi9cbiAgaXNPcGVyYXRpb25hbEVycm9yKCk6IGJvb2xlYW4ge1xuICAgIHJldHVybiB0aGlzLmlzT3BlcmF0aW9uYWw7XG4gIH1cbn1cbiJdLCJ2ZXJzaW9uIjozfQ==

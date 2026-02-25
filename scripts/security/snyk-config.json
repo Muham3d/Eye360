@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/snyk/cli/master/schemas/config.schema.json",
+  "version": "v1.0.0",
+  "project": {
+    "name": "@patrolmanager/backend",
+    "organization": "patrolmanager",
+    "branch": "main",
+    "packageManager": "npm"
+  },
+  "scan": {
+    "severity": {
+      "min": "low",
+      "critical": true,
+      "high": true,
+      "medium": true,
+      "low": true
+    },
+    "devDependencies": true,
+    "licensePolicy": true,
+    "vulnerabilityStrategy": "strict"
+  },
+  "exclude": {
+    "paths": [
+      "node_modules",
+      "dist",
+      "coverage",
+      "reports",
+      ".git",
+      "logs",
+      "uploads"
+    ],
+    "groups": []
+  },
+  "ignore": {
+    "rules": []
+  },
+  "report": {
+    "format": ["json", "html", "sarif"],
+    "outputDirectory": "reports/security",
+    "includeApplicationDependencies": true,
+    "includeLicenseIssues": true,
+    "includeVulnerabilities": true,
+    "severities": ["critical", "high", "medium", "low"]
+  },
+  "code": {
+    "enabled": true,
+    "severityThreshold": {
+      "critical": true,
+      "high": true,
+      "medium": true,
+      "low": false
+    },
+    "maxDepth": 4,
+    "excludePaths": [
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/*.mock.ts"
+    ],
+    "scanType": ["all"],
+    "rulesets": [
+      "security",
+      "performance",
+      "code-quality",
+      "best-practices"
+    ]
+  },
+  "iac": {
+    "enabled": false
+  },
+  "container": {
+    "enabled": false
+  },
+  "patches": {
+    "autoPatch": false,
+    "patchStrategy": "immediate"
+  },
+  "monitor": {
+    "enabled": true,
+    "frequency": "daily"
+  },
+  "webhooks": {
+    "url": ""
+  },
+  "remediation": {
+    "strategy": "auto",
+    "prSettings": {
+      "createPrs": false,
+      "prApprove": false,
+      "prLabel": "security"
+    }
+  }
+}

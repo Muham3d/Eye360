@@ -1,0 +1,119 @@
+<%- include('../layouts/main-header') %>
+
+<div class="p-6 max-w-6xl mx-auto">
+    <div class="flex items-center space-x-2 mb-6 text-sm text-gray-500">
+        <a href="/incidents" class="hover:text-primary-600">Incidents</a>
+        <span>/</span>
+        <span class="text-gray-900 font-medium">Incident #<%= incident.id %></span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h1 class="text-2xl font-bold text-gray-900"><%= incident.title %></h1>
+                    <span class="px-3 py-1 rounded-full text-sm font-bold uppercase bg-red-100 text-red-700">
+                        <%= incident.priority %>
+                    </span>
+                </div>
+                <p class="text-gray-700 whitespace-pre-line"><%= incident.description %></p>
+            </div>
+
+            <!-- Evidence Gallery -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Evidence</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <% if (incident.evidence && incident.evidence.length > 0) { %>
+                        <% incident.evidence.forEach(file => { %>
+                            <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden border">
+                                <img src="<%= file.file_path %>" class="w-full h-full object-cover">
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="col-span-full py-10 text-center text-gray-500 italic">No evidence uploaded.</div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Timeline / Comments -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="p-6 border-b">
+                    <h2 class="text-lg font-bold text-gray-900">Activity & Comments</h2>
+                </div>
+                <div class="p-6 space-y-6 max-h-[500px] overflow-y-auto">
+                    <% if (incident.comments && incident.comments.length > 0) { %>
+                        <% incident.comments.forEach(comment => { %>
+                            <div class="flex space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center font-bold text-gray-500 uppercase">
+                                    <%= comment.user?.firstName?.[0] %><%= comment.user?.lastName?.[0] %>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="bg-gray-50 p-3 rounded-lg">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="text-sm font-bold"><%= comment.user?.firstName %> <%= comment.user?.lastName %></span>
+                                            <span class="text-xs text-gray-500"><%= new Date(comment.createdAt).toLocaleString() %></span>
+                                        </div>
+                                        <p class="text-sm text-gray-700"><%= comment.comment %></p>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } %>
+                </div>
+                <div class="p-6 bg-gray-50 border-t">
+                    <form action="/incidents/<%= incident.id %>/comments" method="POST">
+                        <textarea name="comment" rows="3" placeholder="Add a comment or update..." class="w-full border rounded-lg p-3 text-sm mb-3"></textarea>
+                        <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Post Comment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Details -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-sm font-bold text-gray-500 uppercase mb-4">Status & Assignment</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                        <form action="/incidents/<%= incident.id %>/status" method="POST">
+                            <select name="status" onchange="this.form.submit()" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="new" <%= incident.status === 'new' ? 'selected' : '' %>>New</option>
+                                <option value="investigating" <%= incident.status === 'investigating' ? 'selected' : '' %>>Investigating</option>
+                                <option value="resolved" <%= incident.status === 'resolved' ? 'selected' : '' %>>Resolved</option>
+                                <option value="closed" <%= incident.status === 'closed' ? 'selected' : '' %>>Closed</option>
+                            </select>
+                        </form>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Assigned To</label>
+                        <div class="text-sm text-gray-900 font-medium">
+                            <%= incident.assignee ? `${incident.assignee.firstName} ${incident.assignee.lastName}` : 'Unassigned' %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-sm font-bold text-gray-500 uppercase mb-4">Reporter Information</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Reported By:</span>
+                        <span class="font-medium"><%= incident.reporter?.firstName %> <%= incident.reporter?.lastName %></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Site:</span>
+                        <span class="font-medium"><%= incident.site?.name %></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Date:</span>
+                        <span class="font-medium"><%= new Date(incident.createdAt).toLocaleDateString() %></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../layouts/main-footer') %>

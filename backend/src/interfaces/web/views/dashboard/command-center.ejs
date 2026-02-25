@@ -1,0 +1,94 @@
+<%- include('../layouts/main-header') %>
+
+<div class="flex flex-col h-screen overflow-hidden">
+    <!-- Top Stats Bar -->
+    <div class="bg-white border-b px-6 py-3 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-800">Live Command Center</h1>
+        <div class="flex space-x-6">
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <span class="text-sm font-medium"><span id="active-guards-count">0</span> Guards Online</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-red-500 animate-pulse rounded-full mr-2"></span>
+                <span class="text-sm font-medium"><span id="sos-alerts-count">0</span> Active Alerts</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar: Guard Status List -->
+        <div class="w-80 bg-gray-50 border-r overflow-y-auto flex flex-col">
+            <div class="p-4 border-b bg-white sticky top-0 z-10">
+                <input type="text" placeholder="Search guards..." class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div id="guard-list" class="divide-y">
+                <!-- Guard items injected here via JS -->
+                <div class="p-4 text-center text-gray-500 text-sm italic">
+                    Waiting for guards to connect...
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Map Area -->
+        <div class="flex-1 relative">
+            <div id="map" class="w-full h-full bg-gray-200"></div>
+            
+            <!-- Floating Alert Overlay -->
+            <div id="alert-overlay" class="absolute top-4 right-4 w-96 space-y-3 z-20 pointer-events-none">
+                <!-- SOS Alerts appear here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Socket.io & Maps Integration -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io('/supervisors', {
+        auth: { token: '<%= locals.userToken %>' }
+    });
+
+    // Initialize Map (Leaflet or Google Maps)
+    // For this prototype, we'll use a placeholder setup
+    console.log('Command Center Socket connected');
+
+    socket.on('guard_tracking', (data) => {
+        updateGuardOnMap(data);
+        updateGuardList(data);
+    });
+
+    socket.on('sos_broadcast', (alert) => {
+        showSOSAlert(alert);
+    });
+
+    function showSOSAlert(alert) {
+        const overlay = document.getElementById('alert-overlay');
+        const alertEl = document.createElement('div');
+        alertEl.className = 'bg-red-600 text-white p-4 rounded-lg shadow-2xl pointer-events-auto border-2 border-white animate-bounce';
+        alertEl.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-bold text-lg">🚨 SOS ALERT</h3>
+                    <p class="text-sm">User ID: ${alert.userId}</p>
+                    <p class="text-xs opacity-90">${new Date(alert.timestamp).toLocaleTimeString()}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="text-white">&times;</button>
+            </div>
+            <div class="mt-3 flex space-x-2">
+                <button class="bg-white text-red-600 px-3 py-1 rounded text-xs font-bold uppercase">Dispatch</button>
+                <button class="bg-red-800 px-3 py-1 rounded text-xs font-bold uppercase">Track</button>
+            </div>
+        `;
+        overlay.prepend(alertEl);
+    }
+
+    function updateGuardList(data) {
+        // Simple DOM update for proof of concept
+        const list = document.getElementById('guard-list');
+        const count = document.getElementById('active-guards-count');
+        // Logic to update UI...
+    }
+</script>
+
+<%- include('../layouts/main-footer') %>

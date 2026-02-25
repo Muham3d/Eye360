@@ -1,0 +1,597 @@
+<%
+/**
+ * User List View
+ *
+ * Displays a paginated, filterable list of users with actions
+ *
+ * @param {Object} users - Paginated users data
+ * @param {Object} pagination - Pagination metadata
+ * @param {Object} filters - Current filter values
+ * @param {Array} roles - Available roles
+ */
+%>
+
+<!-- Page Header -->
+<div class="bg-white border-b border-secondary-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-secondary-900">Users</h1>
+        <p class="text-secondary-500 mt-1">Manage user accounts and permissions</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/users/export" class="btn btn-secondary" aria-label="Export users">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Export
+        </a>
+        <a href="/users/new" class="btn btn-primary" aria-label="Add new user">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+          Add User
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User List Content -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Filters Card -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <form id="filter-form" method="GET" action="/users" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Search -->
+        <div class="md:col-span-2">
+          <label for="search" class="input-label">Search</label>
+          <div class="relative">
+            <svg class="w-5 h-5 text-secondary-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input
+              type="search"
+              id="search"
+              name="search"
+              class="input pl-10"
+              placeholder="Search by name or email..."
+              value="<%= filters?.search || '' %>"
+              aria-label="Search users">
+          </div>
+        </div>
+
+        <!-- Role Filter -->
+        <div>
+          <label for="role" class="input-label">Role</label>
+          <select id="role" name="role" class="input" aria-label="Filter by role">
+            <option value="">All Roles</option>
+            <% (roles || []).forEach(r => { %>
+              <option value="<%= r.name %>" <%= filters?.role === r.name ? 'selected' : '' %>>
+                <%= r.name.charAt(0).toUpperCase() + r.name.slice(1) %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+          <label for="status" class="input-label">Status</label>
+          <select id="status" name="status" class="input" aria-label="Filter by status">
+            <option value="">All Statuses</option>
+            <option value="active" <%= filters?.status === 'active' ? 'selected' : '' %>>Active</option>
+            <option value="inactive" <%= filters?.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+            <option value="suspended" <%= filters?.status === 'suspended' ? 'selected' : '' %>>Suspended</option>
+            <option value="pending" <%= filters?.status === 'pending' ? 'selected' : '' %>>Pending</option>
+          </select>
+        </div>
+
+        <!-- Actions -->
+        <div class="md:col-span-4 flex items-center gap-3">
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+          <a href="/users" class="btn btn-secondary">Clear Filters</a>
+          <div class="flex-1"></div>
+          <% if (pagination?.total) { %>
+            <span class="text-sm text-secondary-500">
+              Showing <%= pagination?.from || 0 %>-<%= pagination?.to || 0 %> of <%= pagination?.total || 0 %> users
+            </span>
+          <% } %>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading-state" class="hidden">
+    <div class="card">
+      <div class="card-body">
+        <div class="animate-pulse space-y-4">
+          <div class="h-4 bg-secondary-200 rounded w-1/4"></div>
+          <div class="space-y-2">
+            <% for (let i = 0; i < 10; i++) { %>
+              <div class="h-12 bg-secondary-200 rounded"></div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <% if (!users || users.length === 0) { %>
+    <div class="card">
+      <div class="card-body text-center py-12">
+        <svg class="w-16 h-16 text-secondary-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        <h3 class="text-lg font-semibold text-secondary-900 mb-1">No users found</h3>
+        <p class="text-secondary-500 mb-6">
+          <%= filters?.search || filters?.role || filters?.status ? 'Try adjusting your filters' : 'Get started by adding your first user' %>
+        </p>
+        <a href="/users/new" class="btn btn-primary">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+          Add User
+        </a>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- Users Table Card -->
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">
+                  <button type="button" class="flex items-center gap-1 group" data-sort="name">
+                    Name
+                    <svg class="w-4 h-4 text-secondary-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="flex items-center gap-1 group" data-sort="email">
+                    Email
+                    <svg class="w-4 h-4 text-secondary-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="flex items-center gap-1 group" data-sort="role">
+                    Role
+                    <svg class="w-4 h-4 text-secondary-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="flex items-center gap-1 group" data-sort="status">
+                    Status
+                    <svg class="w-4 h-4 text-secondary-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="flex items-center gap-1 group" data-sort="lastLogin">
+                    Last Login
+                    <svg class="w-4 h-4 text-secondary-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                </th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(user => { %>
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                        <span class="text-sm font-semibold text-primary-600">
+                          <%= (user.firstName || user.email)[0].toUpperCase() %>
+                        </span>
+                      </div>
+                      <div>
+                        <div class="font-medium text-secondary-900">
+                          <%= user.firstName || '' %> <%= user.lastName || '' %>
+                        </div>
+                        <div class="text-sm text-secondary-500 md:hidden"><%= user.email %></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="hidden md:table-cell">
+                    <a href="mailto:<%= user.email %>" class="text-primary-600 hover:text-primary-700 text-truncate max-w-[200px] block">
+                      <%= user.email %>
+                    </a>
+                  </td>
+                  <td>
+                    <% const roleColors = {
+                      admin: 'bg-primary-100 text-primary-800',
+                      manager: 'bg-purple-100 text-purple-800',
+                      supervisor: 'bg-warning-100 text-warning-800',
+                      guard: 'bg-secondary-100 text-secondary-800'
+                    }; %>
+                    <span class="badge <%= roleColors[user.roleName?.toLowerCase()] || roleColors.guard %>">
+                      <%= user.roleName?.charAt(0).toUpperCase() + user.roleName?.slice(1) || 'Guard' %>
+                    </span>
+                  </td>
+                  <td>
+                    <% const statusConfig = {
+                      active: { color: 'bg-success-100 text-success-800', icon: 'check-circle', label: 'Active' },
+                      inactive: { color: 'bg-secondary-100 text-secondary-800', icon: 'minus-circle', label: 'Inactive' },
+                      suspended: { color: 'bg-error-100 text-error-800', icon: 'x-circle', label: 'Suspended' },
+                      pending: { color: 'bg-warning-100 text-warning-800', icon: 'clock', label: 'Pending' }
+                    };
+                    const status = statusConfig[user.status?.toLowerCase()] || statusConfig.pending; %>
+                    <span class="badge <%= status.color %>">
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <% if (status.icon === 'check-circle') { %>
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        <% } else if (status.icon === 'minus-circle') { %>
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        <% } else if (status.icon === 'x-circle') { %>
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        <% } else { %>
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        <% } %>
+                      </svg>
+                      <%= status.label %>
+                    </span>
+                  </td>
+                  <td class="text-secondary-500 text-sm">
+                    <% if (user.lastLoginAt) { %>
+                      <%= new Date(user.lastLoginAt).toLocaleDateString() %>
+                      <span class="text-secondary-400 text-xs ml-1">
+                        <%= new Date(user.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+                      </span>
+                    <% } else { %>
+                      <span class="text-secondary-400">Never</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div class="flex items-center justify-end gap-1">
+                      <!-- Edit Button -->
+                      <a href="/users/<%= user.id %>/edit"
+                         class="p-2 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                         aria-label="Edit <%= user.firstName || user.email %>">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </a>
+
+                      <!-- Change Role Button -->
+                      <button type="button"
+                              class="p-2 text-secondary-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              onclick="openRoleModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email, role: user.roleName }) %>)"
+                              aria-label="Change role for <%= user.firstName || user.email %>">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                      </button>
+
+                      <!-- Change Status Button -->
+                      <button type="button"
+                              class="p-2 text-secondary-500 hover:text-warning-600 hover:bg-warning-50 rounded-lg transition-colors"
+                              onclick="openStatusModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email, status: user.status }) %>)"
+                              aria-label="Change status for <%= user.firstName || user.email %>">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      </button>
+
+                      <!-- Delete Button -->
+                      <button type="button"
+                              class="p-2 text-secondary-500 hover:text-error-600 hover:bg-error-50 rounded-lg transition-colors"
+                              onclick="openDeleteModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email }) %>)"
+                              aria-label="Delete <%= user.firstName || user.email %>">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+
+                      <!-- Actions Dropdown (Mobile) -->
+                      <div class="relative lg:hidden">
+                        <button type="button"
+                                class="p-2 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg transition-colors"
+                                aria-label="More actions"
+                                onclick="toggleUserActions(<%= user.id %>)">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                          </svg>
+                        </button>
+                        <div id="user-actions-<%= user.id %>" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-soft border border-secondary-200 py-1 z-10">
+                          <a href="/users/<%= user.id %>/edit" class="flex items-center gap-3 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Edit
+                          </a>
+                          <button type="button" onclick="openRoleModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email, role: user.roleName }) %>)" class="flex items-center gap-3 w-full px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 text-left">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Change Role
+                          </button>
+                          <button type="button" onclick="openStatusModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email, status: user.status }) %>)" class="flex items-center gap-3 w-full px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 text-left">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Change Status
+                          </button>
+                          <div class="border-t border-secondary-100 my-1"></div>
+                          <button type="button" onclick="openDeleteModal(<%= JSON.stringify({ id: user.id, name: (user.firstName || '') + ' ' + (user.lastName || ''), email: user.email }) %>)" class="flex items-center gap-3 w-full px-4 py-2 text-sm text-error-600 hover:bg-error-50 text-left">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <% if (pagination?.totalPages > 1) { %>
+        <div class="card-footer flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-sm text-secondary-500">
+            Showing <%= pagination?.from || 0 %> to <%= pagination?.to || 0 %> of <%= pagination?.total || 0 %> users
+          </div>
+          <nav class="pagination" aria-label="User list pagination">
+            <% if (pagination?.prevPage) { %>
+              <a href="?page=<%= pagination.prevPage %><%= filters?.search ? '&search=' + filters.search : '' %><%= filters?.role ? '&role=' + filters.role : '' %><%= filters?.status ? '&status=' + filters.status : '' %>"
+                 class="pagination-button"
+                 aria-label="Previous page">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </a>
+            <% } else { %>
+              <button type="button" class="pagination-button" disabled aria-label="Previous page">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+            <% } %>
+
+            <!-- Page Numbers -->
+            <% const startPage = Math.max(1, (pagination?.currentPage || 1) - 2); %>
+            <% const endPage = Math.min(pagination?.totalPages || 1, (pagination?.currentPage || 1) + 2); %>
+            <% for (let i = startPage; i <= endPage; i++) { %>
+              <% if (i === pagination?.currentPage) { %>
+                <span class="pagination-active"><%= i %></span>
+              <% } else { %>
+                <a href="?page=<%= i %><%= filters?.search ? '&search=' + filters.search : '' %><%= filters?.role ? '&role=' + filters.role : '' %><%= filters?.status ? '&status=' + filters.status : '' %>"
+                   class="pagination-button">
+                  <%= i %>
+                </a>
+              <% } %>
+            <% } %>
+
+            <% if (pagination?.nextPage) { %>
+              <a href="?page=<%= pagination.nextPage %><%= filters?.search ? '&search=' + filters.search : '' %><%= filters?.role ? '&role=' + filters.role : '' %><%= filters?.status ? '&status=' + filters.status : '' %>"
+                 class="pagination-button"
+                 aria-label="Next page">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </a>
+            <% } else { %>
+              <button type="button" class="pagination-button" disabled aria-label="Next page">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            <% } %>
+          </nav>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<!-- Modals Container -->
+<div id="modals-container"></div>
+
+<% blocks.scripts = `
+<script>
+  // Toggle mobile actions dropdown
+  function toggleUserActions(userId) {
+    const dropdown = document.getElementById('user-actions-' + userId);
+    const allDropdowns = document.querySelectorAll('[id^="user-actions-"]');
+
+    // Close all other dropdowns
+    allDropdowns.forEach(d => {
+      if (d.id !== 'user-actions-' + userId) {
+        d.classList.add('hidden');
+      }
+    });
+
+    // Toggle current dropdown
+    dropdown.classList.toggle('hidden');
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('[onclick*="toggleUserActions"]')) {
+      document.querySelectorAll('[id^="user-actions-"]').forEach(d => {
+        d.classList.add('hidden');
+      });
+    }
+  });
+
+  // Column sorting
+  document.querySelectorAll('[data-sort]').forEach(button => {
+    button.addEventListener('click', function() {
+      const sort = this.getAttribute('data-sort');
+      const url = new URL(window.location);
+      const currentSort = url.searchParams.get('sort');
+      const currentOrder = url.searchParams.get('order') || 'asc';
+
+      if (currentSort === sort) {
+        url.searchParams.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+      } else {
+        url.searchParams.set('sort', sort);
+        url.searchParams.set('order', 'asc');
+      }
+
+      window.location = url.toString();
+    });
+  });
+
+  // Open role change modal
+  function openRoleModal(user) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay animate-fade-in';
+    modal.innerHTML = \`<form method="POST" action="/users/\${user.id}/role" class="modal-container animate-slide-up">
+      <div class="modal-header">
+        <h3 class="modal-title">Change User Role</h3>
+        <button type="button" class="p-2 text-secondary-500 hover:text-secondary-700 rounded-lg" onclick="this.closest('.modal-overlay').remove()" aria-label="Close">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg mb-4">
+          <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+            <span class="text-lg font-semibold text-primary-600">\${user.name.charAt(0) || user.email.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <p class="font-medium text-secondary-900">\${user.name || user.email}</p>
+            <p class="text-sm text-secondary-500">\${user.email}</p>
+          </div>
+        </div>
+        <div>
+          <label for="new-role-\${user.id}" class="input-label">New Role</label>
+          <select id="new-role-\${user.id}" name="role" class="input" required>
+            <option value="admin" \${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+            <option value="manager" \${user.role === 'manager' ? 'selected' : ''}>Manager</option>
+            <option value="supervisor" \${user.role === 'supervisor' ? 'selected' : ''}>Supervisor</option>
+            <option value="guard" \${user.role === 'guard' ? 'selected' : ''}>Guard</option>
+          </select>
+          <p class="mt-2 text-sm text-secondary-500">This will change the user's permissions and access level.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Change Role</button>
+      </div>
+    </form>\`;
+    document.getElementById('modals-container').appendChild(modal);
+  }
+
+  // Open status change modal
+  function openStatusModal(user) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay animate-fade-in';
+    modal.innerHTML = \`<form method="POST" action="/users/\${user.id}/status" class="modal-container animate-slide-up">
+      <div class="modal-header">
+        <h3 class="modal-title">Change User Status</h3>
+        <button type="button" class="p-2 text-secondary-500 hover:text-secondary-700 rounded-lg" onclick="this.closest('.modal-overlay').remove()" aria-label="Close">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg mb-4">
+          <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+            <span class="text-lg font-semibold text-primary-600">\${user.name.charAt(0) || user.email.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <p class="font-medium text-secondary-900">\${user.name || user.email}</p>
+            <p class="text-sm text-secondary-500">\${user.email}</p>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label for="new-status-\${user.id}" class="input-label">New Status</label>
+            <select id="new-status-\${user.id}" name="status" class="input" required>
+              <option value="active" \${user.status === 'active' ? 'selected' : ''}>Active</option>
+              <option value="inactive" \${user.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+              <option value="suspended" \${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+              <option value="pending" \${user.status === 'pending' ? 'selected' : ''}>Pending</option>
+            </select>
+          </div>
+          <div>
+            <label for="status-reason-\${user.id}" class="input-label">Reason (optional)</label>
+            <textarea id="status-reason-\${user.id}" name="reason" rows="3" class="input" placeholder="Explain why you're changing this user's status..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Change Status</button>
+      </div>
+    </form>\`;
+    document.getElementById('modals-container').appendChild(modal);
+  }
+
+  // Open delete confirmation modal
+  function openDeleteModal(user) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay animate-fade-in';
+    modal.innerHTML = \`<form method="POST" action="/users/\${user.id}/delete" class="modal-container animate-slide-up">
+      <div class="modal-header">
+        <h3 class="modal-title text-error-600">Delete User</h3>
+        <button type="button" class="p-2 text-secondary-500 hover:text-secondary-700 rounded-lg" onclick="this.closest('.modal-overlay').remove()" aria-label="Close">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center gap-3 p-4 bg-error-50 border border-error-200 rounded-lg mb-4">
+          <svg class="w-6 h-6 text-error-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div>
+            <p class="font-medium text-error-900">This action cannot be undone</p>
+            <p class="text-sm text-error-700">The user will be permanently deleted from the system.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg mb-4">
+          <div class="w-12 h-12 rounded-full bg-error-100 flex items-center justify-center">
+            <span class="text-lg font-semibold text-error-600">\${user.name.charAt(0) || user.email.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <p class="font-medium text-secondary-900">\${user.name || user.email}</p>
+            <p class="text-sm text-secondary-500">\${user.email}</p>
+          </div>
+        </div>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="confirm" value="1" required class="w-4 h-4 text-error-600 border-secondary-300 rounded focus:ring-error-500">
+          <span class="text-sm text-secondary-700">I understand that this action cannot be undone</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button type="submit" class="btn btn-error">Delete User</button>
+      </div>
+    </form>\`;
+    document.getElementById('modals-container').appendChild(modal);
+  }
+
+  // Close modals on escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      const modal = document.querySelector('.modal-overlay');
+      if (modal) modal.remove();
+    }
+  });
+</script>
+`; %>

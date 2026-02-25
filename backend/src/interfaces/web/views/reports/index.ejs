@@ -1,0 +1,92 @@
+<%- include('../layouts/main-header') %>
+
+<div class="p-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Analytics & Reports</h1>
+        <p class="text-sm text-gray-500">Generate and download performance reports.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Site Performance Report -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-primary-600">
+            <h2 class="font-bold text-lg mb-2">Site Performance</h2>
+            <p class="text-sm text-gray-600 mb-4">Summary of patrol completion, incidents, and security coverage per site.</p>
+            <form action="/reports/generate" method="POST" class="space-y-3">
+                <input type="hidden" name="type" value="site_performance">
+                <select name="siteId" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="">All Sites</option>
+                    <% sites.forEach(site => { %>
+                        <option value="<%= site.id %>"><%= site.name %></option>
+                    <% }) %>
+                </select>
+                <div class="flex space-x-2">
+                    <input type="date" name="start" class="flex-1 border rounded px-2 py-1 text-xs">
+                    <input type="date" name="end" class="flex-1 border rounded px-2 py-1 text-xs">
+                </div>
+                <button type="submit" class="w-full bg-primary-600 text-white py-2 rounded text-sm font-medium">Generate Report</button>
+            </form>
+        </div>
+
+        <!-- Guard Attendance Report -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-green-600">
+            <h2 class="font-bold text-lg mb-2">Guard Attendance</h2>
+            <p class="text-sm text-gray-600 mb-4">Detailed log of clock-ins, clock-outs, and total hours worked by guards.</p>
+            <form action="/reports/generate" method="POST" class="space-y-3">
+                <input type="hidden" name="type" value="attendance">
+                <select name="guardId" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="">All Guards</option>
+                </select>
+                <div class="flex space-x-2">
+                    <input type="date" name="start" class="flex-1 border rounded px-2 py-1 text-xs">
+                    <input type="date" name="end" class="flex-1 border rounded px-2 py-1 text-xs">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded text-sm font-medium">Generate Report</button>
+            </form>
+        </div>
+
+        <!-- Incident Analysis -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-red-600">
+            <h2 class="font-bold text-lg mb-2">Incident Analysis</h2>
+            <p class="text-sm text-gray-600 mb-4">Trend analysis of reported incidents, priority distribution, and response times.</p>
+            <form action="/reports/generate" method="POST" class="space-y-3">
+                <input type="hidden" name="type" value="incidents">
+                <div class="flex space-x-2">
+                    <input type="date" name="start" class="flex-1 border rounded px-2 py-1 text-xs">
+                    <input type="date" name="end" class="flex-1 border rounded px-2 py-1 text-xs">
+                </div>
+                <button type="submit" class="w-full bg-red-600 text-white py-2 rounded text-sm font-medium">Generate Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recent Generated Reports -->
+    <div class="mt-10 bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h2 class="font-bold text-gray-800">Recent Generated Reports</h2>
+        </div>
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-6 py-3">Report Name</th>
+                    <th class="px-6 py-3">Type</th>
+                    <th class="px-6 py-3">Generated At</th>
+                    <th class="px-6 py-3">Format</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y text-sm">
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 font-medium">Site_Performance_Feb_2026</td>
+                    <td class="px-6 py-4">Site Performance</td>
+                    <td class="px-6 py-4 text-gray-500">Feb 24, 2026 09:30</td>
+                    <td class="px-6 py-4">PDF</td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="text-primary-600 font-medium">Download</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../layouts/main-footer') %>
