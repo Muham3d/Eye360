@@ -1018,6 +1018,28 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
       throw this.handleError(error);
     }
   }
+
+  /**
+   * Archive old completed patrol runs
+   */
+  async archiveOldCompleted(daysToKeep: number): Promise<number> {
+    try {
+      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+
+      const deletedCount = await models.PatrolRun.destroy({
+        where: {
+          status: 'completed',
+          actual_end: {
+            [Op.lt]: cutoffDate,
+          },
+        },
+      });
+
+      return deletedCount;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
 }
 
 export default SequelizePatrolRunRepository;
