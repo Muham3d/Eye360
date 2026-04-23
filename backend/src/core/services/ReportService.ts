@@ -183,8 +183,14 @@ export class ReportService {
       throw new Error(`Site ${siteId} not found`);
     }
 
-    // Get patrol data
-    const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
+    // Get patrol data, incidents, and shifts in parallel
+    const [patrolRuns, incidents, incidentStats, shiftStats] = await Promise.all([
+      this.patrolRepo.findBySiteId(siteId),
+      this.incidentRepo.findBySite(siteId),
+      this.incidentRepo.getStatistics(),
+      this.shiftRepo.getStatistics(range.start, range.end),
+    ]);
+
     const completedPatrols = patrolRuns.filter((p) => p.status === 'completed');
     const missedPatrols = patrolRuns.filter((p) => p.status === 'missed');
     const inProgressPatrols = patrolRuns.filter((p) => p.status === 'in_progress');
@@ -193,8 +199,15 @@ export class ReportService {
     let verifiedCheckpoints = 0;
     let totalPatrolDuration = 0;
 
-    for (const patrol of completedPatrols) {
-      const details = await this.patrolRepo.findById(patrol.id);
+    // Fetch details for all completed patrols in parallel
+    const patrolDetails = await Promise.all(
+      completedPatrols.map((patrol) => this.patrolRepo.findById(patrol.id))
+    );
+
+    for (let i = 0; i < completedPatrols.length; i++) {
+      const details = patrolDetails[i];
+      const patrol = completedPatrols[i];
+
       if (details) {
         totalCheckpoints += details.checkpoints?.length || 0;
         verifiedCheckpoints += details.checkpoints?.filter((c) => c.verified).length || 0;
@@ -203,13 +216,6 @@ export class ReportService {
         }
       }
     }
-
-    // Get incident data
-    const incidents = await this.incidentRepo.findBySite(siteId);
-    const incidentStats = await this.incidentRepo.getStatistics();
-
-    // Get shift data
-    const shiftStats = await this.shiftRepo.getStatistics(range.start, range.end);
 
     // Calculate overall score (0-100)
     const patrolScore = patrolRuns.length > 0 ? (completedPatrols.length / patrolRuns.length) * 40 : 0;
@@ -266,36 +272,44 @@ export class ReportService {
   async generatePatrolDetails(siteId: number, range: IReportDateRange): Promise<IPatrolDetailRecord[]> {
     const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
 
+    const filteredPatrols = patrolRuns.filter(
+      (patrol) => patrol.scheduledAt >= range.start && patrol.scheduledAt <= range.end
+    );
+
+    const fullPatrols = await Promise.all(
+      filteredPatrols.map((patrol) => this.patrolRepo.findById(patrol.id))
+    );
+
     const details: IPatrolDetailRecord[] = [];
 
-    for (const patrol of patrolRuns) {
-      if (patrol.scheduledAt >= range.start && patrol.scheduledAt <= range.end) {
-        const fullPatrol = await this.patrolRepo.findById(patrol.id);
-        if (!fullPatrol) continue;
+    for (let i = 0; i < filteredPatrols.length; i++) {
+      const patrol = filteredPatrols[i];
+      const fullPatrol = fullPatrols[i];
 
-        const checkpointsCompleted = fullPatrol.checkpoints?.filter((c) => c.verified).length || 0;
-        const checkpointsTotal = fullPatrol.checkpoints?.length || 0;
+      if (!fullPatrol) continue;
 
-        let duration: number | undefined;
-        if (patrol.startedAt && patrol.completedAt) {
-          duration = (new Date(patrol.completedAt).getTime() - new Date(patrol.startedAt).getTime()) / (1000 * 60);
-        }
+      const checkpointsCompleted = fullPatrol.checkpoints?.filter((c) => c.verified).length || 0;
+      const checkpointsTotal = fullPatrol.checkpoints?.length || 0;
 
-        details.push({
-          id: patrol.id,
-          guardName: `${patrol.guard?.firstName || ''} ${patrol.guard?.lastName || ''}`.trim() || 'Unknown',
-          siteName: patrol.site?.name || 'Unknown',
-          templateName: patrol.template?.name || 'Unknown',
-          scheduledStart: patrol.scheduledAt,
-          actualStart: patrol.startedAt,
-          completedAt: patrol.completedAt,
-          status: patrol.status,
-          checkpointsCompleted,
-          checkpointsTotal,
-          duration,
-          notes: patrol.notes,
-        });
+      let duration: number | undefined;
+      if (patrol.startedAt && patrol.completedAt) {
+        duration = (new Date(patrol.completedAt).getTime() - new Date(patrol.startedAt).getTime()) / (1000 * 60);
       }
+
+      details.push({
+        id: patrol.id,
+        guardName: `${patrol.guard?.firstName || ''} ${patrol.guard?.lastName || ''}`.trim() || 'Unknown',
+        siteName: patrol.site?.name || 'Unknown',
+        templateName: patrol.template?.name || 'Unknown',
+        scheduledStart: patrol.scheduledAt,
+        actualStart: patrol.startedAt,
+        completedAt: patrol.completedAt,
+        status: patrol.status,
+        checkpointsCompleted,
+        checkpointsTotal,
+        duration,
+        notes: patrol.notes,
+      });
     }
 
     return details;
@@ -528,16 +542,17 @@ export class ReportService {
    * @returns Array of site reports for comparison
    */
   async generateComparisonReport(siteIds: number[], range: IReportDateRange): Promise<ISitePerformanceReport[]> {
-    const reports: ISitePerformanceReport[] = [];
-
-    for (const siteId of siteIds) {
+    const reportPromises = siteIds.map(async (siteId) => {
       try {
-        const report = await this.generateSiteReport(siteId, range);
-        reports.push(report);
+        return await this.generateSiteReport(siteId, range);
       } catch (error) {
         console.error(`Failed to generate report for site ${siteId}:`, error);
+        return null;
       }
-    }
+    });
+
+    const results = await Promise.all(reportPromises);
+    const reports = results.filter((report): report is ISitePerformanceReport => report !== null);
 
     // Sort by overall score
     reports.sort((a, b) => b.overallScore - a.overallScore);
