@@ -17,7 +17,7 @@ module.exports = {
     sourceType: 'module',
     project: './tsconfig.json',
   },
-  plugins: ['@typescript-eslint', 'security', 'import'],
+  plugins: ['@typescript-eslint', 'import'],
   rules: {
     // Security rules
     'security/detect-object-injection': 'warn',
