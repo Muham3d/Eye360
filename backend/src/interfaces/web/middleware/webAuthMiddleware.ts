@@ -7,6 +7,7 @@
  */
 
 import { UnauthorizedError } from '@core/domain/errors/index.js';
+import { getUserService } from '@core/services/index.js';
 import { setFlashMessage } from '../config/ejs.js';
 
 /**
@@ -106,16 +107,35 @@ export function attachCurrentUser(req: WebAuthenticatedRequest, res: any, next: 
 
 /**
  * Check if user account is active
- * TODO: Implement account status checks
  */
-export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, next: any): void {
+export async function requireActiveAccount(
+  req: WebAuthenticatedRequest,
+  res: any,
+  next: any
+): Promise<void> {
   if (!req.session?.user) {
     return next();
   }
 
-  // TODO: Check account status from database
-  // For now, just pass through
-  next();
+  try {
+    const userService = getUserService();
+    const user = await userService.getUserById(req.session.user.id);
+
+    if (!user || user.status !== 'active') {
+      // Clear user from session if account is no longer active
+      if (req.session) {
+        delete req.session.user;
+        delete req.session.token;
+      }
+
+      setFlashMessage(req, 'error', 'Your account is inactive. Please contact an administrator.');
+      return res.redirect('/login');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 /**
