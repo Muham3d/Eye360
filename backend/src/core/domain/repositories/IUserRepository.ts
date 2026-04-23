@@ -294,6 +294,12 @@ export interface IUserRepository {
   getAllRoles(): Promise<IRole[]>;
 
   /**
+   * Get all roles with user counts
+   * @returns List of roles with user counts
+   */
+  getAllRolesWithCounts(): Promise<(IRole & { userCount: number })[]>;
+
+  /**
    * Get role by ID
    * @param id - Role ID
    * @returns Role or null

@@ -109,20 +109,12 @@ export class RoleService {
    * @returns List of all roles
    */
   async getAllRoles(includeUserCounts = false): Promise<IRole[]> {
-    const roles = await this.userRepository.getAllRoles();
-
     if (includeUserCounts) {
-      // Enrich with user counts
-      const rolesWithCounts = await Promise.all(
-        roles.map(async (role) => {
-          const userCount = await this.userRepository.countByRole(role.id);
-          return { ...role, userCount };
-        })
-      );
-      return rolesWithCounts as unknown as IRole[];
+      const rolesWithCounts = await this.userRepository.getAllRolesWithCounts();
+      return rolesWithCounts as IRole[];
     }
 
-    return roles;
+    return this.userRepository.getAllRoles();
   }
 
   /**
@@ -131,26 +123,17 @@ export class RoleService {
    * @returns List of role summaries
    */
   async getRoleSummaries(): Promise<RoleSummary[]> {
-    const roles = await this.userRepository.getAllRoles();
+    const roles = await this.userRepository.getAllRolesWithCounts();
 
-    return Promise.all(
-      roles.map(async (role) => {
-        const [permissions, userCount] = await Promise.all([
-          this.userRepository.getPermissionsForRole(role.id),
-          this.userRepository.countByRole(role.id),
-        ]);
-
-        return {
-          id: role.id,
-          name: role.name,
-          level: role.level,
-          description: role.description,
-          permissionCount: permissions.length,
-          userCount,
-          isSystemRole: role.level <= 4, // System roles have levels 1-4
-        };
-      })
-    );
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      level: role.level,
+      description: role.description,
+      permissionCount: role.permissions?.length || 0,
+      userCount: role.userCount,
+      isSystemRole: role.level <= 4, // System roles have levels 1-4
+    }));
   }
 
   /**

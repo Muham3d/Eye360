@@ -167,6 +167,48 @@ export class SequelizeUserRepository extends BaseRepository<User, any, any> impl
   }
 
   /**
+   * Get all roles with user counts
+   */
+  async getAllRolesWithCounts(): Promise<(IRole & { userCount: number })[]> {
+    try {
+      const roles = await models.Role.findAll({
+        attributes: {
+          include: [
+            [
+              models.sequelize.literal(`(
+                SELECT COUNT(*)
+                FROM users AS user
+                WHERE
+                  user.role_id = Role.id
+                  AND user.deleted_at IS NULL
+              )`),
+              'userCount',
+            ],
+          ],
+        },
+        include: [
+          {
+            model: models.Permission,
+            as: 'permissions',
+            through: { attributes: [] },
+          },
+        ],
+        order: [['level', 'ASC']],
+      });
+
+      return roles.map((role) => {
+        const dto = UserDTOMapper.roleToDTO(role);
+        return {
+          ...dto,
+          userCount: parseInt(role.getDataValue('userCount') || '0', 10),
+        };
+      });
+    } catch (error) {
+      throw this.handleUserError(error);
+    }
+  }
+
+  /**
    * Find a user by email address
    */
   async findByEmail(email: string, options?: Partial<IUserQueryOptions>): Promise<IUser | null> {
