@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "ESNext",
+    "lib": ["ES2021"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["./backend/src/core/*"],
+      "@infrastructure/*": ["./backend/src/infrastructure/*"],
+      "@interfaces/*": ["./backend/src/interfaces/*"],
+      "@/*": ["./backend/src/*"]
+    }
+  },
+  "include": [
+    "backend/src/**/*"
+  ]
+}
