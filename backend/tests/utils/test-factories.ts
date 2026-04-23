@@ -7,6 +7,7 @@
 
 import type { RoleName } from '../../src/infrastructure/database/models/Role.js';
 import type { UserStatus } from '../../src/infrastructure/database/models/User.js';
+import { SiteStatus } from '../../src/core/domain/entities/Site.js';
 
 /**
  * User factory
@@ -254,4 +255,73 @@ export function createPermissions(): any[] {
     createPermissionFactory({ id: 9, name: 'sites.delete', resource: 'sites', action: 'delete' }),
     createPermissionFactory({ id: 10, name: 'sites.manage', resource: 'sites', action: 'manage' }),
   ];
+}
+
+/**
+ * Site factory
+ */
+export function createSiteFactory(overrides: Partial<any> = {}) {
+  return {
+    id: 1,
+    name: 'Test Site',
+    description: 'A test site description',
+    address: '123 Test St, Test City',
+    geofenceBoundary: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+          [1, 1],
+          [1, 0],
+          [0, 0],
+        ],
+      ],
+    },
+    geofenceBuffer: 50,
+    timezone: 'UTC',
+    status: SiteStatus.ACTIVE,
+    createdById: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+/**
+ * Site creation DTO factory
+ */
+export function createSiteDTOFactory(overrides: Partial<any> = {}) {
+  return {
+    name: 'New Site',
+    description: 'New site description',
+    address: '456 New Ave, New City',
+    geofenceBoundary: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+          [1, 1],
+          [1, 0],
+          [0, 0],
+        ],
+      ],
+    },
+    geofenceBuffer: 50,
+    timezone: 'UTC',
+    status: SiteStatus.ACTIVE,
+    createdById: 1,
+    ...overrides,
+  };
+}
+
+/**
+ * Site update DTO factory
+ */
+export function createUpdateSiteDTOFactory(overrides: Partial<any> = {}) {
+  return {
+    name: 'Updated Site Name',
+    ...overrides,
+  };
 }
