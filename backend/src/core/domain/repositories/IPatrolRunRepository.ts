@@ -244,6 +244,13 @@ export interface IPatrolRunRepository {
    * @returns Count of patrol runs
    */
   countByStatus(status: string, options?: Partial<IPatrolRunQueryOptions>): Promise<number>;
+
+  /**
+   * Archive old completed or missed patrols
+   * @param daysToKeep - Number of days to keep records
+   * @returns Number of archived records
+   */
+  archiveOldRecords(daysToKeep: number): Promise<number>;
 }
 
 /**

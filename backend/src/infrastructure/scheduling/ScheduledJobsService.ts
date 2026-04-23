@@ -8,7 +8,8 @@
  */
 
 import logger from '../config/logger.js';
-import { getShiftService } from '../../core/services/index.js';
+import { getShiftService, getSessionService } from '../../core/services/index.js';
+import { diContainer } from '../database/repositories/index.js';
 
 /**
  * Scheduled Job Configuration
@@ -132,20 +133,54 @@ export class ScheduledJobsService {
     const intervalMs = this.config.cleanupOldRecordsInterval * 60 * 60 * 1000;
 
     const timer = setInterval(async () => {
-      try {
-        logger.debug('Running cleanup job...');
-        // TODO: Implement cleanup logic for old records
-        // - Delete old location history records (keep last 30 days)
-        // - Archive old completed patrols
-        // - Clean up expired sessions
-        logger.debug('Cleanup job completed');
-      } catch (error) {
-        logger.error('Error in cleanup job', { error });
-      }
+      await this.executeCleanup();
     }, intervalMs);
 
     this.timers.set('cleanup', timer);
     logger.info(`Scheduled cleanup job (every ${this.config.cleanupOldRecordsInterval} hours)`);
+  }
+
+  /**
+   * Execute the cleanup logic
+   * - Deletes old location history records
+   * - Archives old completed patrols (TODO in future if needed)
+   * - Cleans up expired sessions
+   */
+  private async executeCleanup(): Promise<void> {
+    try {
+      logger.debug('Running cleanup job...');
+
+      // Clean up expired sessions using the SessionService
+      try {
+        const sessionService = getSessionService();
+        const deletedSessions = await sessionService.cleanupExpiredSessions();
+        logger.info(`Cleaned up ${deletedSessions} expired sessions`);
+      } catch (error) {
+        logger.error('Error cleaning up expired sessions', { error });
+      }
+
+      // Delete old location history records (keep last 30 days)
+      try {
+        const locationHistoryRepository = diContainer.get<import('../../core/domain/repositories/ILocationHistoryRepository.js').ILocationHistoryRepository>('locationHistoryRepository');
+        const deletedLocations = await locationHistoryRepository.deleteOldRecords(30);
+        logger.info(`Cleaned up ${deletedLocations} old location history records`);
+      } catch (error) {
+        logger.error('Error cleaning up old location history records', { error });
+      }
+
+      // Archive old completed patrols (keep last 90 days)
+      try {
+        const patrolRunRepository = diContainer.get<import('../../core/domain/repositories/IPatrolRunRepository.js').IPatrolRunRepository>('patrolRunRepository');
+        const archivedPatrols = await patrolRunRepository.archiveOldRecords(90);
+        logger.info(`Archived ${archivedPatrols} old completed patrols`);
+      } catch (error) {
+        logger.error('Error archiving old completed patrols', { error });
+      }
+
+      logger.debug('Cleanup job completed');
+    } catch (error) {
+      logger.error('Error in cleanup job', { error });
+    }
   }
 
   /**
@@ -186,7 +221,7 @@ export class ScheduledJobsService {
         break;
 
       case 'cleanup':
-        // TODO: Implement cleanup logic
+        await this.executeCleanup();
         break;
 
       case 'reportGeneration':

@@ -124,3 +124,4 @@ site/
 .fusebox/
 .dynamodb/
 .tern-port
+backend/.jest-cache

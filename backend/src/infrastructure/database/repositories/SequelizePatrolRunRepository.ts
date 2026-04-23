@@ -257,6 +257,24 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
     }
   }
 
+  async archiveOldRecords(daysToKeep: number): Promise<number> {
+    try {
+      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+
+      // Soft-delete the rows using the destroy method which utilizes the paranoid option.
+      const count = await this.model.destroy({
+        where: {
+          scheduledDate: { [Op.lt]: cutoffDate },
+          status: { [Op.in]: ['completed', 'missed', 'abandoned'] }
+        }
+      });
+
+      return count;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   /**
    * Get all patrol runs with filtering and pagination
    */
