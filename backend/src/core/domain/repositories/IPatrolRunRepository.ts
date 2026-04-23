@@ -23,6 +23,13 @@ import { IPaginatedResult } from './IUserRepository.js';
  */
 export interface IPatrolRunRepository {
   /**
+   * Archive old completed patrol runs
+   * @param daysToKeep - Number of days to keep before archiving
+   * @returns Number of archived patrol runs
+   */
+  archiveOldCompleted(daysToKeep: number): Promise<number>;
+
+  /**
    * Find a patrol run by ID
    * @param id - Patrol run ID
    * @param options - Query options
@@ -244,6 +251,13 @@ export interface IPatrolRunRepository {
    * @returns Count of patrol runs
    */
   countByStatus(status: string, options?: Partial<IPatrolRunQueryOptions>): Promise<number>;
+
+  /**
+   * Archive old completed patrol runs
+   * @param daysToKeep - Number of days to keep before archiving
+   * @returns Number of archived patrol runs
+   */
+  archiveOldCompleted(daysToKeep: number): Promise<number>;
 }
 
 /**
@@ -276,4 +290,11 @@ export class PatrolRunRepositoryError extends Error {
     this.code = code;
     this.details = details;
   }
+
+  /**
+   * Archive old completed patrol runs
+   * @param daysToKeep - Number of days to keep before archiving
+   * @returns Number of archived patrol runs
+   */
+  archiveOldCompleted(daysToKeep: number): Promise<number>;
 }
