@@ -121,7 +121,6 @@ export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, nex
 
 /**
  * Validate session and redirect if expired
- * TODO: Implement session validation
  */
 export async function validateSession(req: WebAuthenticatedRequest, res: any, next: any): Promise<void> {
   if (!req.session?.user || !req.session?.token) {
@@ -135,9 +134,6 @@ export async function validateSession(req: WebAuthenticatedRequest, res: any, ne
     if (!result.valid) {
       // Clear session data if invalid
       if (req.session) {
-        // We use req.session.user = null instead of destroy() because destroy() is async
-        // and may cause issues if not handled carefully in middleware.
-        // Also, we want to keep flash messages for the next request.
         req.session.user = undefined;
         req.session.token = undefined;
       }
