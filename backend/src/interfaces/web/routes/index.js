@@ -21,6 +21,7 @@ import {
   requireRole,
   redirectIfAuthenticated,
   attachCurrentUser,
+  validateSession,
 } from '../middleware/webAuthMiddleware.js';
 
 const router = express.Router();
@@ -29,6 +30,11 @@ const router = express.Router();
  * Apply middleware to attach current user to all requests
  */
 router.use(attachCurrentUser);
+
+/**
+ * Apply middleware to validate session with database
+ */
+router.use(validateSession);
 
 /**
  * @route   GET /

@@ -8,6 +8,7 @@
 
 import { UnauthorizedError } from '@core/domain/errors/index.js';
 import { setFlashMessage } from '../config/ejs.js';
+import { getSessionService } from '@core/services/index.js';
 
 /**
  * Enhanced request type with session user
@@ -122,14 +123,44 @@ export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, nex
  * Validate session and redirect if expired
  * TODO: Implement session validation
  */
-export function validateSession(req: WebAuthenticatedRequest, res: any, next: any): void {
-  if (!req.session?.user) {
+export async function validateSession(req: WebAuthenticatedRequest, res: any, next: any): Promise<void> {
+  if (!req.session?.user || !req.session?.token) {
     return next();
   }
 
-  // TODO: Validate session token with database
-  // For now, just pass through
-  next();
+  try {
+    const sessionService = getSessionService();
+    const result = await sessionService.validateSession(req.session.token);
+
+    if (!result.valid) {
+      // Clear session data if invalid
+      if (req.session) {
+        // We use req.session.user = null instead of destroy() because destroy() is async
+        // and may cause issues if not handled carefully in middleware.
+        // Also, we want to keep flash messages for the next request.
+        req.session.user = undefined;
+        req.session.token = undefined;
+      }
+
+      setFlashMessage(req, 'warning', 'Your session has expired. Please log in again.');
+      return res.redirect('/login');
+    }
+
+    // Update session user with latest data from database
+    if (result.user) {
+      req.session.user = {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role: result.user.roleName,
+      };
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 export default {
