@@ -8,12 +8,15 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createChildLogger } from './logger.js';
 
 // Load environment variables
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const dbLogger = createChildLogger('DATABASE');
 
 /**
  * Environment type for database configuration
@@ -113,7 +116,7 @@ function createSQLiteConfig(): SequelizeConfig {
     storage: getSQLitePath(),
     logging: (sql: string, timing?: number) => {
       const timingStr = timing !== undefined ? ` (${timing}ms)` : '';
-      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+      dbLogger.debug(`QUERY${timingStr}: ${sql}`);
     },
     logQueryParameters: true,
     timezone: '+00:00',
@@ -148,7 +151,7 @@ function buildPostgresConfig(): SequelizeConfig {
     dialect: 'postgres',
     logging: (sql: string, timing?: number) => {
       const timingStr = timing !== undefined ? ` (${timing}ms)` : '';
-      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+      dbLogger.debug(`QUERY${timingStr}: ${sql}`);
     },
     logQueryParameters: true,
     timezone: '+00:00',
@@ -166,10 +169,13 @@ function buildPostgresConfig(): SequelizeConfig {
       idle: getEnvNumberOrDefault('DB_POOL_IDLE', 10000),
       evict: getEnvNumberOrDefault('DB_POOL_EVICT', 60000),
     },
-    ssl: DB_SSL === 'true' ? {
-      require: true,
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-    } : undefined,
+    ssl:
+      DB_SSL === 'true'
+        ? {
+            require: true,
+            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+          }
+        : undefined,
   };
 }
 
@@ -179,11 +185,11 @@ function buildPostgresConfig(): SequelizeConfig {
 function createEnvironmentConfig(env: NodeEnv): SequelizeConfig {
   // Use SQLite for development/test unless explicitly disabled
   if (USE_SQLITE && (env === 'development' || env === 'test')) {
-    console.log('[DATABASE] Using SQLite for development');
+    dbLogger.info('Using SQLite for development');
     return createSQLiteConfig();
   }
 
-  console.log('[DATABASE] Using PostgreSQL');
+  dbLogger.info('Using PostgreSQL');
   return buildPostgresConfig();
 }
 
@@ -198,16 +204,16 @@ export async function testConnection(): Promise<boolean> {
     const sequelize = new Sequelize(dbConfig);
 
     await sequelize.authenticate();
-    console.log('[DATABASE] Connection established successfully');
+    dbLogger.info('Connection established successfully');
 
     // Test a simple query
     await sequelize.query('SELECT 1 as result');
-    console.log('[DATABASE] Query test passed');
+    dbLogger.info('Query test passed');
 
     await sequelize.close();
     return true;
   } catch (error) {
-    console.error('[DATABASE] Connection test failed:', error);
+    dbLogger.error('Connection test failed', error as Error);
     return false;
   }
 }
