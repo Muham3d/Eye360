@@ -21,6 +21,13 @@ import {
   requireRole,
   redirectIfAuthenticated,
   attachCurrentUser,
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+  validateSession,
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 } from '../middleware/webAuthMiddleware.js';
 
 const router = express.Router();
@@ -31,6 +38,17 @@ const router = express.Router();
 router.use(attachCurrentUser);
 
 /**
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+ * Apply middleware to validate session with database
+ */
+router.use(validateSession);
+
+/**
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
  * @route   GET /
  * @desc    Dashboard home page
  */

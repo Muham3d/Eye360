@@ -15,7 +15,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
       - run: npm install
+=======
+      - run: npm ci
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+      - run: npm install
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+      - run: npm ci
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
       - run: npm run lint
       - run: npm test
 

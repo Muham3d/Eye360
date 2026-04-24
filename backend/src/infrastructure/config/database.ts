@@ -8,6 +8,16 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import { createChildLogger } from './logger.js';
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +25,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+const dbLogger = createChildLogger('DATABASE');
+
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 /**
  * Environment type for database configuration
  */
@@ -113,7 +134,19 @@ function createSQLiteConfig(): SequelizeConfig {
     storage: getSQLitePath(),
     logging: (sql: string, timing?: number) => {
       const timingStr = timing !== undefined ? ` (${timing}ms)` : '';
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
       console.log(`[DB QUERY]${timingStr}: ${sql}`);
+=======
+      dbLogger.debug(`QUERY${timingStr}: ${sql}`);
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     },
     logQueryParameters: true,
     timezone: '+00:00',
@@ -148,7 +181,19 @@ function buildPostgresConfig(): SequelizeConfig {
     dialect: 'postgres',
     logging: (sql: string, timing?: number) => {
       const timingStr = timing !== undefined ? ` (${timing}ms)` : '';
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
       console.log(`[DB QUERY]${timingStr}: ${sql}`);
+=======
+      dbLogger.debug(`QUERY${timingStr}: ${sql}`);
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+      console.log(`[DB QUERY]${timingStr}: ${sql}`);
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     },
     logQueryParameters: true,
     timezone: '+00:00',
@@ -166,10 +211,32 @@ function buildPostgresConfig(): SequelizeConfig {
       idle: getEnvNumberOrDefault('DB_POOL_IDLE', 10000),
       evict: getEnvNumberOrDefault('DB_POOL_EVICT', 60000),
     },
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     ssl: DB_SSL === 'true' ? {
       require: true,
       rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
     } : undefined,
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    ssl:
+      DB_SSL === 'true'
+        ? {
+            require: true,
+            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+          }
+        : undefined,
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   };
 }
 
@@ -179,11 +246,31 @@ function buildPostgresConfig(): SequelizeConfig {
 function createEnvironmentConfig(env: NodeEnv): SequelizeConfig {
   // Use SQLite for development/test unless explicitly disabled
   if (USE_SQLITE && (env === 'development' || env === 'test')) {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     console.log('[DATABASE] Using SQLite for development');
     return createSQLiteConfig();
   }
 
   console.log('[DATABASE] Using PostgreSQL');
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    dbLogger.info('Using SQLite for development');
+    return createSQLiteConfig();
+  }
+
+  dbLogger.info('Using PostgreSQL');
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   return buildPostgresConfig();
 }
 
@@ -198,16 +285,48 @@ export async function testConnection(): Promise<boolean> {
     const sequelize = new Sequelize(dbConfig);
 
     await sequelize.authenticate();
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     console.log('[DATABASE] Connection established successfully');
 
     // Test a simple query
     await sequelize.query('SELECT 1 as result');
     console.log('[DATABASE] Query test passed');
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    dbLogger.info('Connection established successfully');
+
+    // Test a simple query
+    await sequelize.query('SELECT 1 as result');
+    dbLogger.info('Query test passed');
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
     await sequelize.close();
     return true;
   } catch (error) {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     console.error('[DATABASE] Connection test failed:', error);
+=======
+    dbLogger.error('Connection test failed', error as Error);
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+    console.error('[DATABASE] Connection test failed:', error);
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+    console.error('[DATABASE] Connection test failed:', error);
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     return false;
   }
 }

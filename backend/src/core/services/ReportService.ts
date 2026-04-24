@@ -183,6 +183,9 @@ export class ReportService {
       throw new Error(`Site ${siteId} not found`);
     }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     // Get patrol data, incidents, and shifts in parallel
     const [patrolRuns, incidents, incidentStats, shiftStats] = await Promise.all([
       this.patrolRepo.findBySiteId(siteId),
@@ -191,6 +194,18 @@ export class ReportService {
       this.shiftRepo.getStatistics(range.start, range.end),
     ]);
 
+=======
+    // Get patrol data
+    const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+    // Get patrol data
+    const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+    // Get patrol data
+    const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     const completedPatrols = patrolRuns.filter((p) => p.status === 'completed');
     const missedPatrols = patrolRuns.filter((p) => p.status === 'missed');
     const inProgressPatrols = patrolRuns.filter((p) => p.status === 'in_progress');
@@ -199,6 +214,9 @@ export class ReportService {
     let verifiedCheckpoints = 0;
     let totalPatrolDuration = 0;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     // Fetch details for all completed patrols in parallel
     const patrolDetails = await Promise.all(
       completedPatrols.map((patrol) => this.patrolRepo.findById(patrol.id))
@@ -208,6 +226,18 @@ export class ReportService {
       const details = patrolDetails[i];
       const patrol = completedPatrols[i];
 
+=======
+    for (const patrol of completedPatrols) {
+      const details = await this.patrolRepo.findById(patrol.id);
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+    for (const patrol of completedPatrols) {
+      const details = await this.patrolRepo.findById(patrol.id);
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+    for (const patrol of completedPatrols) {
+      const details = await this.patrolRepo.findById(patrol.id);
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
       if (details) {
         totalCheckpoints += details.checkpoints?.length || 0;
         verifiedCheckpoints += details.checkpoints?.filter((c) => c.verified).length || 0;
@@ -217,6 +247,28 @@ export class ReportService {
       }
     }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
+    // Get incident data
+    const incidents = await this.incidentRepo.findBySite(siteId);
+    const incidentStats = await this.incidentRepo.getStatistics();
+
+    // Get shift data
+    const shiftStats = await this.shiftRepo.getStatistics(range.start, range.end);
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     // Calculate overall score (0-100)
     const patrolScore = patrolRuns.length > 0 ? (completedPatrols.length / patrolRuns.length) * 40 : 0;
     const attendanceScore = shiftStats.totalShifts > 0 ? (shiftStats.completedShifts / shiftStats.totalShifts) * 30 : 0;
@@ -272,6 +324,9 @@ export class ReportService {
   async generatePatrolDetails(siteId: number, range: IReportDateRange): Promise<IPatrolDetailRecord[]> {
     const patrolRuns = await this.patrolRepo.findBySiteId(siteId);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     const filteredPatrols = patrolRuns.filter(
       (patrol) => patrol.scheduledAt >= range.start && patrol.scheduledAt <= range.end
     );
@@ -310,6 +365,48 @@ export class ReportService {
         duration,
         notes: patrol.notes,
       });
+=======
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
+    const details: IPatrolDetailRecord[] = [];
+
+    for (const patrol of patrolRuns) {
+      if (patrol.scheduledAt >= range.start && patrol.scheduledAt <= range.end) {
+        const fullPatrol = await this.patrolRepo.findById(patrol.id);
+        if (!fullPatrol) continue;
+
+        const checkpointsCompleted = fullPatrol.checkpoints?.filter((c) => c.verified).length || 0;
+        const checkpointsTotal = fullPatrol.checkpoints?.length || 0;
+
+        let duration: number | undefined;
+        if (patrol.startedAt && patrol.completedAt) {
+          duration = (new Date(patrol.completedAt).getTime() - new Date(patrol.startedAt).getTime()) / (1000 * 60);
+        }
+
+        details.push({
+          id: patrol.id,
+          guardName: `${patrol.guard?.firstName || ''} ${patrol.guard?.lastName || ''}`.trim() || 'Unknown',
+          siteName: patrol.site?.name || 'Unknown',
+          templateName: patrol.template?.name || 'Unknown',
+          scheduledStart: patrol.scheduledAt,
+          actualStart: patrol.startedAt,
+          completedAt: patrol.completedAt,
+          status: patrol.status,
+          checkpointsCompleted,
+          checkpointsTotal,
+          duration,
+          notes: patrol.notes,
+        });
+      }
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     }
 
     return details;
@@ -542,6 +639,9 @@ export class ReportService {
    * @returns Array of site reports for comparison
    */
   async generateComparisonReport(siteIds: number[], range: IReportDateRange): Promise<ISitePerformanceReport[]> {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     const reportPromises = siteIds.map(async (siteId) => {
       try {
         return await this.generateSiteReport(siteId, range);
@@ -553,6 +653,28 @@ export class ReportService {
 
     const results = await Promise.all(reportPromises);
     const reports = results.filter((report): report is ISitePerformanceReport => report !== null);
+=======
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
+    const reports: ISitePerformanceReport[] = [];
+
+    for (const siteId of siteIds) {
+      try {
+        const report = await this.generateSiteReport(siteId, range);
+        reports.push(report);
+      } catch (error) {
+        console.error(`Failed to generate report for site ${siteId}:`, error);
+      }
+    }
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
     // Sort by overall score
     reports.sort((a, b) => b.overallScore - a.overallScore);
