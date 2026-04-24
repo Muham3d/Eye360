@@ -9,7 +9,14 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
+<<<<<<< HEAD
 # package-lock.json
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+package-lock.json
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 yarn.lock
 pnpm-lock.yaml
 
@@ -124,3 +131,7 @@ site/
 .fusebox/
 .dynamodb/
 .tern-port
+<<<<<<< HEAD
+=======
+backend/.jest-cache
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)

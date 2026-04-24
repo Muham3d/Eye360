@@ -257,6 +257,27 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
     }
   }
 
+<<<<<<< HEAD
+=======
+  async archiveOldRecords(daysToKeep: number): Promise<number> {
+    try {
+      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+
+      // Soft-delete the rows using the destroy method which utilizes the paranoid option.
+      const count = await this.model.destroy({
+        where: {
+          scheduledDate: { [Op.lt]: cutoffDate },
+          status: { [Op.in]: ['completed', 'missed', 'abandoned'] }
+        }
+      });
+
+      return count;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   /**
    * Get all patrol runs with filtering and pagination
    */
@@ -1018,6 +1039,9 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
       throw this.handleError(error);
     }
   }
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 
   /**
    * Archive old completed patrol runs
@@ -1040,6 +1064,12 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
       throw this.handleError(error);
     }
   }
+=======
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 }
 
 export default SequelizePatrolRunRepository;

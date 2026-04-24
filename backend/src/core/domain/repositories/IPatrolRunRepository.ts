@@ -23,6 +23,9 @@ import { IPaginatedResult } from './IUserRepository.js';
  */
 export interface IPatrolRunRepository {
   /**
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
    * Archive old completed patrol runs
    * @param daysToKeep - Number of days to keep before archiving
    * @returns Number of archived patrol runs
@@ -30,6 +33,12 @@ export interface IPatrolRunRepository {
   archiveOldCompleted(daysToKeep: number): Promise<number>;
 
   /**
+=======
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
    * Find a patrol run by ID
    * @param id - Patrol run ID
    * @param options - Query options
@@ -251,6 +260,9 @@ export interface IPatrolRunRepository {
    * @returns Count of patrol runs
    */
   countByStatus(status: string, options?: Partial<IPatrolRunQueryOptions>): Promise<number>;
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 
   /**
    * Archive old completed patrol runs
@@ -258,6 +270,19 @@ export interface IPatrolRunRepository {
    * @returns Number of archived patrol runs
    */
   archiveOldCompleted(daysToKeep: number): Promise<number>;
+=======
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+
+  /**
+   * Archive old completed or missed patrols
+   * @param daysToKeep - Number of days to keep records
+   * @returns Number of archived records
+   */
+  archiveOldRecords(daysToKeep: number): Promise<number>;
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 }
 
 /**
@@ -290,6 +315,9 @@ export class PatrolRunRepositoryError extends Error {
     this.code = code;
     this.details = details;
   }
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 
   /**
    * Archive old completed patrol runs
@@ -297,4 +325,10 @@ export class PatrolRunRepositoryError extends Error {
    * @returns Number of archived patrol runs
    */
   archiveOldCompleted(daysToKeep: number): Promise<number>;
+=======
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 }

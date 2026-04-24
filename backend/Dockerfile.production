@@ -3,7 +3,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 RUN npm install
+=======
+RUN npm ci
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+RUN npm ci
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+RUN npm ci
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
 COPY . .
 RUN npm run build

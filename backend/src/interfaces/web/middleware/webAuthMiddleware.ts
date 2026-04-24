@@ -7,8 +7,20 @@
  */
 
 import { UnauthorizedError } from '@core/domain/errors/index.js';
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 import { getUserService } from '@core/services/index.js';
+=======
+>>>>>>> origin/db-logger-replacement-3863421860436406492
 import { setFlashMessage } from '../config/ejs.js';
+=======
+import { setFlashMessage } from '../config/ejs.js';
+import { getSessionService } from '@core/services/index.js';
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+import { setFlashMessage } from '../config/ejs.js';
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
 /**
  * Enhanced request type with session user
@@ -107,16 +119,37 @@ export function attachCurrentUser(req: WebAuthenticatedRequest, res: any, next: 
 
 /**
  * Check if user account is active
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
  */
 export async function requireActiveAccount(
   req: WebAuthenticatedRequest,
   res: any,
   next: any
 ): Promise<void> {
+=======
+ * TODO: Implement account status checks
+ */
+export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, next: any): void {
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+=======
+ * TODO: Implement account status checks
+ */
+export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, next: any): void {
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+ * TODO: Implement account status checks
+ */
+export function requireActiveAccount(req: WebAuthenticatedRequest, res: any, next: any): void {
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   if (!req.session?.user) {
     return next();
   }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
   try {
     const userService = getUserService();
     const user = await userService.getUserById(req.session.user.id);
@@ -132,14 +165,66 @@ export async function requireActiveAccount(
       return res.redirect('/login');
     }
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+=======
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
+  // TODO: Check account status from database
+  // For now, just pass through
+  next();
 }
 
 /**
  * Validate session and redirect if expired
+<<<<<<< HEAD
+ */
+export async function validateSession(req: WebAuthenticatedRequest, res: any, next: any): Promise<void> {
+  if (!req.session?.user || !req.session?.token) {
+    return next();
+  }
+
+  try {
+    const sessionService = getSessionService();
+    const result = await sessionService.validateSession(req.session.token);
+
+    if (!result.valid) {
+      // Clear session data if invalid
+      if (req.session) {
+        req.session.user = undefined;
+        req.session.token = undefined;
+      }
+
+      setFlashMessage(req, 'warning', 'Your session has expired. Please log in again.');
+      return res.redirect('/login');
+    }
+
+    // Update session user with latest data from database
+    if (result.user) {
+      req.session.user = {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role: result.user.roleName,
+      };
+    }
+
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+    next();
+  } catch (error) {
+    next(error);
+  }
+<<<<<<< HEAD
+=======
+  // TODO: Check account status from database
+  // For now, just pass through
+  next();
+>>>>>>> origin/db-logger-replacement-3863421860436406492
+}
+
+/**
+ * Validate session and redirect if expired
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
  * TODO: Implement session validation
  */
 export function validateSession(req: WebAuthenticatedRequest, res: any, next: any): void {
@@ -150,6 +235,11 @@ export function validateSession(req: WebAuthenticatedRequest, res: any, next: an
   // TODO: Validate session token with database
   // For now, just pass through
   next();
+<<<<<<< HEAD
+=======
+>>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
+=======
+>>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 }
 
 export default {
