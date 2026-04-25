@@ -531,3 +531,56 @@ const errors = errors || {};
   });
 </script>
 `; %>
+
+<% blocks.scripts = `
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    const inputs = form.querySelectorAll('input, select, textarea');
+
+    // Remove server error styling when user starts typing
+    inputs.forEach(input => {
+      input.addEventListener('input', function() {
+        this.classList.remove('error-state', 'border-error-500', 'focus:ring-error-500');
+        const errorEl = document.getElementById(this.name + '-error');
+        if (errorEl) {
+          errorEl.style.display = 'none';
+        }
+      });
+    });
+
+    form.addEventListener('submit', function(e) {
+      let isValid = true;
+      inputs.forEach(input => {
+        if (input.required && !input.value.trim()) {
+          input.classList.add('error-state');
+          isValid = false;
+        } else if (input.type === 'email' && input.value && !input.value.includes('@')) {
+          input.classList.add('error-state');
+          isValid = false;
+        }
+      });
+
+      // Password match check
+      const pass = document.getElementById('password');
+      const passConfirm = document.getElementById('confirmPassword');
+      if (pass && passConfirm && pass.value !== passConfirm.value) {
+         passConfirm.classList.add('error-state');
+         const err = document.getElementById('confirmPassword-error');
+         if(err) {
+            err.textContent = "Passwords do not match.";
+            err.style.display = "block";
+         }
+         isValid = false;
+      }
+
+      if (!isValid) {
+        e.preventDefault();
+        // Optional: show a generic flash toast via JS
+      }
+    });
+  });
+</script>
+`; %>
