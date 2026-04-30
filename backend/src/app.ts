@@ -82,6 +82,11 @@ export function createApp(): Application {
   // Serve static assets
   app.use('/assets', express.static(path.join(__dirname, '../interfaces/web/public/assets')));
 
+  // Serve favicon.ico from the root
+  app.get('/favicon.ico', (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../interfaces/web/public/assets/favicon.ico'));
+  });
+
   // Health check endpoint
   app.get('/health', (req: Request, res: Response) => {
     const health = {

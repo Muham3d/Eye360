@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PatrolManager - <%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="h-full">
+  <div class="min-h-full">
+    <nav class="bg-indigo-600">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <span class="text-white font-bold text-xl">PatrolManager</span>
+            </div>
+            <div class="hidden md:block">
+              <div class="ml-10 flex items-baseline space-x-4">
+                <a href="/admin/dashboard" class="text-white hover:bg-indigo-500 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                <a href="/admin/users" class="bg-indigo-700 text-white px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                <a href="/admin/sites" class="text-white hover:bg-indigo-500 px-3 py-2 rounded-md text-sm font-medium">Sites</a>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center">
+            <a href="/logout" class="text-white transition-opacity hover:opacity-80 text-sm font-medium">Logout</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <header class="bg-white shadow">
+      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900"><%= title %></h1>
+      </div>
+    </header>
+
+    <main>
+      <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <%- body %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

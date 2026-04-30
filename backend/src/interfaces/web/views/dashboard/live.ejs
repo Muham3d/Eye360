@@ -1,0 +1,743 @@
+<%- include('../layouts/main-header') %>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+   crossorigin="" />
+
+<style>
+    /* Custom styles for live dashboard */
+    #live-map {
+        height: 100%;
+        width: 100%;
+    }
+
+    .guard-marker {
+        background: #3B82F6;
+        border: 3px solid #1E40AF;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .guard-marker.in-patrol {
+        background: #10B981;
+        border-color: #059669;
+    }
+
+    .guard-marker.offline {
+        background: #9CA3AF;
+        border-color: #6B7280;
+        opacity: 0.6;
+    }
+
+    .sos-marker {
+        background: #EF4444;
+        border: 4px solid #DC2626;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        animation: sos-pulse 1s infinite;
+    }
+
+    @keyframes sos-pulse {
+        0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.8;
+        }
+    }
+
+    .guard-card {
+        transition: all 0.2s;
+    }
+
+    .guard-card:hover {
+        background-color: #EFF6FF;
+    }
+
+    .guard-card.selected {
+        background-color: #DBEAFE;
+        border-left: 4px solid #3B82F6;
+    }
+
+    /* Alert Banner Animation */
+    .sos-alert-banner {
+        animation: slide-in 0.3s ease-out, pulse-border 1.5s infinite;
+    }
+
+    @keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes pulse-border {
+        0%, 100% {
+            border-color: #EF4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+        50% {
+            border-color: #F87171;
+            box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+        }
+    }
+
+    /* Audio player for audible alerts */
+    .audio-control {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+</style>
+
+<div class="flex flex-col h-screen overflow-hidden bg-gray-100">
+    <!-- Top Header Bar -->
+    <header class="bg-white border-b shadow-sm px-6 py-3">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <svg class="w-8 h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                    Live Command Center
+                </h1>
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    Real-time Tracking
+                </span>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <!-- Active Guards -->
+                <div class="flex items-center bg-green-50 px-4 py-2 rounded-lg">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    <span class="text-sm font-semibold text-green-700">
+                        <span id="active-guards-count">-</span> Guards Online
+                    </span>
+                </div>
+
+                <!-- Active Patrols -->
+                <div class="flex items-center bg-blue-50 px-4 py-2 rounded-lg">
+                    <svg class="w-4 h-4 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm font-semibold text-blue-700">
+                        <span id="active-patrols-count">-</span> Active Patrols
+                    </span>
+                </div>
+
+                <!-- SOS Alerts -->
+                <div id="sos-counter" class="flex items-center bg-red-50 px-4 py-2 rounded-lg">
+                    <span class="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+                    <span class="text-sm font-bold text-red-700">
+                        <span id="sos-alerts-count">0</span> Active Alerts
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Left Sidebar: Guard List -->
+        <aside class="w-96 bg-white border-r flex flex-col shadow-lg">
+            <div class="p-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">Active Guards</h2>
+                <input type="text" id="guard-search" placeholder="Search guards..."
+                       class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <div class="flex mt-3 space-x-2">
+                    <button onclick="filterGuards('all')" class="flex-1 px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">All</button>
+                    <button onclick="filterGuards('patrol')" class="flex-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">On Patrol</button>
+                    <button onclick="filterGuards('idle')" class="flex-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">Idle</button>
+                </div>
+            </div>
+
+            <div id="guard-list" class="flex-1 overflow-y-auto divide-y">
+                <!-- Guard cards injected via JS -->
+                <div class="p-8 text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <p>Waiting for guards to connect...</p>
+                    <p class="text-xs mt-2">Make sure guards are online</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Map Area -->
+        <main class="flex-1 relative">
+            <!-- Leaflet Map Container -->
+            <div id="live-map" class="w-full h-full"></div>
+
+            <!-- Map Controls -->
+            <div class="absolute top-4 right-4 z-[400] flex flex-col space-y-2">
+                <button onclick="centerMapOnAllGuards()" class="bg-white p-2 rounded-lg shadow hover:bg-gray-50" title="Fit all guards">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                    </svg>
+                </button>
+                <button onclick="toggleGeofences()" class="bg-white p-2 rounded-lg shadow hover:bg-gray-50" title="Toggle geofences">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                </button>
+                <button onclick="toggleHeatmap()" class="bg-white p-2 rounded-lg shadow hover:bg-gray-50" title="Toggle heatmap">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- SOS Alert Overlay -->
+            <div id="alert-overlay" class="absolute top-4 left-4 w-96 space-y-3 z-[500] pointer-events-none">
+                <!-- SOS Alerts appear here -->
+            </div>
+
+            <!-- Selected Guard Info Panel -->
+            <div id="guard-info-panel" class="absolute bottom-4 left-4 w-80 bg-white rounded-lg shadow-xl p-4 hidden z-[400]">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 id="panel-guard-name" class="font-bold text-lg">Guard Name</h3>
+                        <p id="panel-guard-role" class="text-sm text-gray-600">Role</p>
+                    </div>
+                    <button onclick="closeGuardPanel()" class="text-gray-400 hover:text-gray-600">&times;</button>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span id="panel-guard-status" class="font-semibold">Active</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Battery:</span>
+                        <span id="panel-guard-battery" class="font-semibold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Last Update:</span>
+                        <span id="panel-guard-update" class="font-semibold">--</span>
+                    </div>
+                    <div id="panel-patrol-info" class="pt-2 border-t hidden">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Patrol:</span>
+                            <span id="panel-patrol-name" class="font-semibold">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Progress:</span>
+                            <span id="panel-patrol-progress" class="font-semibold">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t flex space-x-2">
+                    <button onclick="messageGuard()" class="flex-1 bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700">Message</button>
+                    <button onclick="viewGuardDetails()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded text-sm hover:bg-gray-300">Details</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel: Patrol Status -->
+        <aside class="w-80 bg-white border-l flex flex-col shadow-lg">
+            <div class="p-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700">Active Patrols</h2>
+            </div>
+            <div id="patrol-list" class="flex-1 overflow-y-auto divide-y">
+                <div class="p-8 text-center text-gray-500 text-sm">
+                    No active patrols
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Audio element for SOS alerts -->
+<audio id="sos-audio" preload="auto">
+    <source src="/assets/sounds/sos-alert.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Audio Control Toggle -->
+<div class="audio-control">
+    <button id="audio-toggle" onclick="toggleAudio()" class="bg-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2 hover:bg-gray-50">
+        <svg id="audio-icon-on" class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657z" clip-rule="evenodd"/>
+        </svg>
+        <svg id="audio-icon-off" class="w-5 h-5 text-gray-600 hidden" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L12.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+        <span id="audio-text" class="text-sm font-medium">Alerts On</span>
+    </button>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<!-- Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    // ============== GLOBAL STATE ==============
+    const state = {
+        map: null,
+        guards: new Map(),
+        markers: new Map(),
+        selectedGuardId: null,
+        audioEnabled: true,
+        geofencesVisible: false,
+        heatmapVisible: false,
+        activePatrols: new Map(),
+        sosAlerts: new Map(),
+        filters: {
+            status: 'all', // all, patrol, idle
+            search: ''
+        }
+    };
+
+    // ============== SOCKET.IO CONNECTION ==============
+    const socket = io('/supervisors', {
+        auth: { token: '<%= locals.userToken %>' }
+    });
+
+    socket.on('connect', () => {
+        console.log('✅ Connected to Command Center');
+        // Request initial guard list
+        socket.emit('get_active_guards');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('❌ Disconnected from Command Center');
+    });
+
+    // Listen for location updates
+    socket.on('guard_tracking', (data) => {
+        updateGuardLocation(data);
+    });
+
+    // Listen for SOS alerts
+    socket.on('sos_broadcast', (alert) => {
+        handleSOSAlert(alert);
+    });
+
+    // ============== MAP INITIALIZATION ==============
+    function initMap() {
+        // Default center (can be configured based on tenant)
+        const defaultCenter = [40.7128, -74.0060]; // New York City
+
+        state.map = L.map('live-map', {
+            center: defaultCenter,
+            zoom: 13,
+            zoomControl: true,
+            maxBounds: [[-90, -180], [90, 180]],
+            maxBoundsViscosity: 1.0
+        });
+
+        // Add tile layer (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(state.map);
+
+        // Create custom icons
+        L.DivIcon.extend({
+            options: {
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            }
+        });
+
+        console.log('✅ Map initialized');
+    }
+
+    // ============== GUARD MARKER MANAGEMENT ==============
+    function updateGuardLocation(data) {
+        const { userId, latitude, longitude, status, activePatrolId, batteryLevel, speed, bearing } = data;
+
+        // Update guard data
+        state.guards.set(userId, {
+            userId,
+            latitude,
+            longitude,
+            status,
+            activePatrolId,
+            batteryLevel,
+            speed,
+            bearing,
+            lastUpdate: new Date()
+        });
+
+        // Update or create marker
+        if (state.markers.has(userId)) {
+            const marker = state.markers.get(userId);
+            marker.setLatLng([latitude, longitude]);
+            updateMarkerStyle(marker, data);
+        } else {
+            createGuardMarker(userId, data);
+        }
+
+        // Update UI
+        updateGuardList();
+        updateCounts();
+    }
+
+    function createGuardMarker(userId, data) {
+        const isActivePatrol = data.activePatrolId || data.status === 'in_patrol';
+        const iconClass = isActivePatrol ? 'guard-marker in-patrol' : 'guard-marker';
+
+        const icon = L.divIcon({
+            className: iconClass,
+            html: `<span>${userId}</span>`
+        });
+
+        const marker = L.marker([data.latitude, data.longitude], { icon })
+            .addTo(state.map);
+
+        marker.on('click', () => {
+            selectGuard(userId);
+        });
+
+        // Add popup
+        marker.bindPopup(`
+            <div class="text-sm">
+                <strong>Guard #${userId}</strong><br>
+                Lat: ${data.latitude.toFixed(5)}<br>
+                Lng: ${data.longitude.toFixed(5)}<br>
+                ${data.activePatrolId ? '🚶 On Patrol' : '✓ Idle'}
+            </div>
+        `);
+
+        state.markers.set(userId, marker);
+    }
+
+    function updateMarkerStyle(marker, data) {
+        const isActivePatrol = data.activePatrolId || data.status === 'in_patrol';
+        const iconClass = isActivePatrol ? 'guard-marker in-patrol' : 'guard-marker';
+
+        const icon = L.divIcon({
+            className: iconClass,
+            html: `<span>${data.userId}</span>`
+        });
+
+        marker.setIcon(icon);
+    }
+
+    function removeGuardMarker(userId) {
+        if (state.markers.has(userId)) {
+            state.map.removeLayer(state.markers.get(userId));
+            state.markers.delete(userId);
+        }
+        state.guards.delete(userId);
+        updateGuardList();
+        updateCounts();
+    }
+
+    // ============== GUARD LIST UI ==============
+    function updateGuardList() {
+        const listContainer = document.getElementById('guard-list');
+        const guards = Array.from(state.guards.values());
+
+        if (guards.length === 0) {
+            listContainer.innerHTML = `
+                <div class="p-8 text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <p>Waiting for guards to connect...</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Filter guards
+        let filteredGuards = guards;
+        if (state.filters.status !== 'all') {
+            filteredGuards = guards.filter(g => {
+                if (state.filters.status === 'patrol') return g.activePatrolId;
+                if (state.filters.status === 'idle') return !g.activePatrolId;
+                return true;
+            });
+        }
+
+        if (state.filters.search) {
+            const search = state.filters.search.toLowerCase();
+            filteredGuards = filteredGuards.filter(g =>
+                g.userId.toString().includes(search)
+            );
+        }
+
+        listContainer.innerHTML = filteredGuards.map(guard => `
+            <div class="guard-card p-4 cursor-pointer ${state.selectedGuardId === guard.userId ? 'selected' : ''}"
+                 onclick="selectGuard(${guard.userId})"
+                 data-user-id="${guard.userId}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-semibold text-gray-800">Guard #${guard.userId}</h3>
+                        <p class="text-xs text-gray-600">
+                            ${guard.activePatrolId ? '🚶 On Patrol' : '✓ Idle'}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs ${getBatteryColor(guard.batteryLevel)}">
+                            ${guard.batteryLevel ? guard.batteryLevel + '%' : '--'}
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                    Updated: ${formatTime(guard.lastUpdate)}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getBatteryColor(level) {
+        if (!level) return 'text-gray-400';
+        if (level > 50) return 'text-green-600';
+        if (level > 20) return 'text-yellow-600';
+        return 'text-red-600';
+    }
+
+    function formatTime(date) {
+        if (!date) return '--:--';
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return `${diff}s ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        return date.toLocaleTimeString();
+    }
+
+    // ============== GUARD SELECTION ==============
+    function selectGuard(userId) {
+        state.selectedGuardId = userId;
+
+        // Update guard list selection
+        document.querySelectorAll('.guard-card').forEach(card => {
+            card.classList.remove('selected');
+            if (parseInt(card.dataset.userId) === userId) {
+                card.classList.add('selected');
+            }
+        });
+
+        // Pan map to guard
+        const guard = state.guards.get(userId);
+        if (guard) {
+            state.map.panTo([guard.latitude, guard.longitude], 15);
+
+            // Show info panel
+            showGuardInfo(guard);
+        }
+    }
+
+    function showGuardInfo(guard) {
+        const panel = document.getElementById('guard-info-panel');
+        panel.classList.remove('hidden');
+
+        document.getElementById('panel-guard-name').textContent = `Guard #${guard.userId}`;
+        document.getElementById('panel-guard-role').textContent = guard.activePatrolId ? 'On Patrol' : 'Available';
+        document.getElementById('panel-guard-status').textContent = guard.activePatrolId ? 'On Patrol' : 'Idle';
+        document.getElementById('panel-guard-battery').textContent = guard.batteryLevel ? `${guard.batteryLevel}%` : '--';
+        document.getElementById('panel-guard-update').textContent = formatTime(guard.lastUpdate);
+
+        // Show patrol info if on patrol
+        if (guard.activePatrolId) {
+            document.getElementById('panel-patrol-info').classList.remove('hidden');
+            // Would populate patrol details here
+        }
+    }
+
+    function closeGuardPanel() {
+        document.getElementById('guard-info-panel').classList.add('hidden');
+        state.selectedGuardId = null;
+        document.querySelectorAll('.guard-card').forEach(card => card.classList.remove('selected'));
+    }
+
+    // ============== COUNT UPDATES ==============
+    function updateCounts() {
+        document.getElementById('active-guards-count').textContent = state.guards.size;
+        document.getElementById('active-patrols-count').textContent =
+            Array.from(state.guards.values()).filter(g => g.activePatrolId).length;
+    }
+
+    // ============== SOS ALERT HANDLING ==============
+    function handleSOSAlert(alert) {
+        console.error('🚨 SOS ALERT:', alert);
+
+        state.sosAlerts.set(alert.alertId || alert.userId, alert);
+        updateCounts();
+
+        // Play audio if enabled
+        if (state.audioEnabled) {
+            playSOSAudio();
+        }
+
+        // Create alert banner
+        createAlertBanner(alert);
+
+        // Add SOS marker to map
+        createSOSMarker(alert);
+    }
+
+    function createAlertBanner(alert) {
+        const overlay = document.getElementById('alert-overlay');
+        const banner = document.createElement('div');
+        banner.className = 'sos-alert-banner bg-red-600 text-white p-4 rounded-lg shadow-2xl pointer-events-auto border-2 border-white';
+        banner.dataset.alertId = alert.alertId || alert.userId;
+
+        banner.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 mr-2 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold text-lg">🚨 SOS ALERT</h3>
+                        <p class="text-sm opacity-90">Guard #${alert.userId}</p>
+                    </div>
+                </div>
+                <button onclick="dismissAlert('${alert.alertId || alert.userId}')" class="text-white text-xl hover:text-gray-200">&times;</button>
+            </div>
+            <p class="font-medium mb-2">${alert.message || 'Emergency assistance needed!'}</p>
+            <div class="text-xs opacity-90 mb-3">
+                📍 ${alert.latitude.toFixed(5)}, ${alert.longitude.toFixed(5)}<br>
+                🕐 ${alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'Just now'}
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="acknowledgeSOS('${alert.alertId || alert.userId}')" class="bg-white text-red-600 px-3 py-1 rounded text-xs font-bold uppercase hover:bg-gray-100">
+                    Acknowledge
+                </button>
+                <button onclick="dispatchToGuard('${alert.alertId || alert.userId}')" class="bg-red-800 px-3 py-1 rounded text-xs font-bold uppercase hover:bg-red-900">
+                    Dispatch
+                </button>
+                <button onclick="centerOnAlert(${alert.latitude}, ${alert.longitude})" class="bg-white text-red-600 px-3 py-1 rounded text-xs font-bold uppercase hover:bg-gray-100">
+                    Locate
+                </button>
+            </div>
+        `;
+
+        overlay.appendChild(banner);
+
+        // Update SOS counter
+        document.getElementById('sos-alerts-count').textContent = state.sosAlerts.size;
+    }
+
+    function createSOSMarker(alert) {
+        const icon = L.divIcon({
+            className: 'sos-marker',
+            html: '<span class="text-white text-xs">SOS</span>'
+        });
+
+        const marker = L.marker([alert.latitude, alert.longitude], { icon })
+            .addTo(state.map);
+
+        marker.bindPopup(`
+            <div class="text-center">
+                <strong class="text-red-600">🚨 SOS ALERT</strong><br>
+                Guard #${alert.userId}<br>
+                ${alert.message || 'Emergency'}
+            </div>
+        `);
+
+        state.markers.set(`sos-${alert.alertId || alert.userId}`, marker);
+
+        // Pan to SOS location
+        state.map.panTo([alert.latitude, alert.longitude], 16);
+    }
+
+    function dismissAlert(alertId) {
+        const banner = document.querySelector(`[data-alert-id="${alertId}"]`);
+        if (banner) {
+            banner.remove();
+        }
+
+        // Remove SOS marker
+        const marker = state.markers.get(`sos-${alertId}`);
+        if (marker) {
+            state.map.removeLayer(marker);
+            state.markers.delete(`sos-${alertId}`);
+        }
+
+        state.sosAlerts.delete(alertId);
+        document.getElementById('sos-alerts-count').textContent = state.sosAlerts.size;
+    }
+
+    // ============== MAP CONTROLS ==============
+    function centerMapOnAllGuards() {
+        const guards = Array.from(state.guards.values());
+        if (guards.length === 0) return;
+
+        if (guards.length === 1) {
+            const guard = guards[0];
+            state.map.panTo([guard.latitude, guard.longitude], 15);
+            return;
+        }
+
+        const bounds = L.latLngBounds(
+            guards.map(g => [g.latitude, g.longitude])
+        );
+        state.map.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    function centerOnAlert(lat, lng) {
+        state.map.panTo([lat, lng], 17);
+    }
+
+    function toggleGeofences() {
+        state.geofencesVisible = !state.geofencesVisible;
+        // Would toggle geofence polygons on map
+        console.log('Geofences:', state.geofencesVisible);
+    }
+
+    function toggleHeatmap() {
+        state.heatmapVisible = !state.heatmapVisible;
+        // Would toggle patrol heatmap layer
+        console.log('Heatmap:', state.heatmapVisible);
+    }
+
+    function filterGuards(status) {
+        state.filters.status = status;
+        updateGuardList();
+    }
+
+    // Add search functionality
+    document.getElementById('guard-search').addEventListener('input', (e) => {
+        state.filters.search = e.target.value;
+        updateGuardList();
+    });
+
+    // ============== AUDIO CONTROLS ==============
+    function toggleAudio() {
+        state.audioEnabled = !state.audioEnabled;
+
+        document.getElementById('audio-icon-on').classList.toggle('hidden', !state.audioEnabled);
+        document.getElementById('audio-icon-off').classList.toggle('hidden', state.audioEnabled);
+        document.getElementById('audio-text').textContent = state.audioEnabled ? 'Alerts On' : 'Alerts Off';
+    }
+
+    function playSOSAudio() {
+        const audio = document.getElementById('sos-audio');
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log('Could not play audio:', e));
+    }
+
+    // ============== INITIALIZATION ==============
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        console.log('✅ Live Command Center initialized');
+    });
+</script>
+
+<%- include('../layouts/main-footer') %>

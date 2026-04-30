@@ -8,41 +8,20 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-<<<<<<< HEAD
-<<<<<<< HEAD
     'plugin:security/recommended',
-=======
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-=======
-    'plugin:security/recommended',
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     'plugin:prettier/recommended',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2021,
     sourceType: 'module',
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    project: './tsconfig.json',
->>>>>>> origin/db-logger-replacement-3863421860436406492
-=======
     project: './backend/tsconfig.json',
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-=======
-    project: './tsconfig.json',
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   },
   plugins: ['@typescript-eslint', 'security', 'import'],
   rules: {
     // Security rules
     'security/detect-object-injection': 'warn',
     'security/detect-non-literal-fs-filename': 'warn',
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
     'security/detect-buffer-noassert': 'warn',
     'security/detect-child-process': 'warn',
     'security/detect-disable-mustache-escape': 'warn',
@@ -53,9 +32,6 @@ module.exports = {
     'security/detect-possible-timing-attacks': 'warn',
     'security/detect-pseudo-random-bytes': 'warn',
     'security/detect-unsafe-regex': 'warn',
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-=======
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
     // TypeScript rules
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],

@@ -1,0 +1,90 @@
+<div class="bg-white border-b border-secondary-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-secondary-900">Sites</h1>
+        <p class="text-secondary-500 mt-1">Manage patrol locations and geofence settings</p>
+      </div>
+      <a href="/sites/new" class="btn btn-primary">Add Site</a>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  <div class="card">
+    <div class="card-body">
+      <form method="GET" action="/sites" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="md:col-span-3">
+          <label class="input-label" for="search">Search</label>
+          <input id="search" name="search" class="input" value="<%= filters?.search || '' %>" placeholder="Site name, code, city...">
+        </div>
+        <div>
+          <label class="input-label" for="status">Status</label>
+          <select id="status" name="status" class="input">
+            <option value="">All</option>
+            <option value="active" <%= filters?.status === 'active' ? 'selected' : '' %>>Active</option>
+            <option value="inactive" <%= filters?.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+            <option value="under_maintenance" <%= filters?.status === 'under_maintenance' ? 'selected' : '' %>>Maintenance</option>
+            <option value="archived" <%= filters?.status === 'archived' ? 'selected' : '' %>>Archived</option>
+          </select>
+        </div>
+        <div class="md:col-span-4 flex gap-3">
+          <button class="btn btn-primary" type="submit">Apply</button>
+          <a class="btn btn-secondary" href="/sites">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Geofence</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!sites || sites.length === 0) { %>
+              <tr>
+                <td colspan="6" class="text-center text-secondary-500">No sites found</td>
+              </tr>
+            <% } %>
+            <% (sites || []).forEach(site => { %>
+              <tr>
+                <td class="font-medium"><%= site.name %></td>
+                <td><%= site.code %></td>
+                <td><%= [site.city, site.state, site.country].filter(Boolean).join(', ') || '-' %></td>
+                <td><span class="badge badge-secondary"><%= site.status %></span></td>
+                <td><%= site.geofenceType %></td>
+                <td class="text-right">
+                  <a class="btn btn-secondary" href="/sites/<%= site.id %>/edit">Edit</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <% if (pagination && pagination.totalPages > 1) { %>
+    <div class="flex items-center justify-between text-sm text-secondary-600">
+      <span>Showing <%= pagination.from %>-<%= pagination.to %> of <%= pagination.total %></span>
+      <div class="flex gap-2">
+        <% if (pagination.prevPage) { %>
+          <a class="btn btn-secondary" href="?page=<%= pagination.prevPage %><%= filters?.search ? '&search=' + encodeURIComponent(filters.search) : '' %><%= filters?.status ? '&status=' + encodeURIComponent(filters.status) : '' %>">Prev</a>
+        <% } %>
+        <% if (pagination.nextPage) { %>
+          <a class="btn btn-secondary" href="?page=<%= pagination.nextPage %><%= filters?.search ? '&search=' + encodeURIComponent(filters.search) : '' %><%= filters?.status ? '&status=' + encodeURIComponent(filters.status) : '' %>">Next</a>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>

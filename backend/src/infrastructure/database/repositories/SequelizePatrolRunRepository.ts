@@ -257,17 +257,18 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
     }
   }
 
-<<<<<<< HEAD
-=======
+  /**
+   * Archive old completed or missed patrols
+   */
   async archiveOldRecords(daysToKeep: number): Promise<number> {
     try {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
 
       // Soft-delete the rows using the destroy method which utilizes the paranoid option.
-      const count = await this.model.destroy({
+      const count = await models.PatrolRun.destroy({
         where: {
-          scheduledDate: { [Op.lt]: cutoffDate },
-          status: { [Op.in]: ['completed', 'missed', 'abandoned'] }
+          scheduled_start: { [Op.lt]: cutoffDate },
+          status: { [Op.in]: ['completed', 'skipped', 'abandoned', 'failed'] }
         }
       });
 
@@ -277,7 +278,6 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
     }
   }
 
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
   /**
    * Get all patrol runs with filtering and pagination
    */
@@ -318,7 +318,7 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
         queryOptions.where = where;
       }
 
-      const result = await this.findAll(queryOptions);
+      const result = await super.findAll(queryOptions);
       return {
         data: result.data.map((model) => this.mapToEntity(model)),
         total: result.total,
@@ -955,7 +955,7 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
     try {
       const now = new Date();
 
-      const models = await models.PatrolRun.findAll({
+      const modelsList = await models.PatrolRun.findAll({
         where: {
           status: 'scheduled',
           scheduled_end: {
@@ -964,7 +964,7 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
         },
       });
 
-      return models.map((m) => this.mapToEntity(m));
+      return modelsList.map((m) => this.mapToEntity(m));
     } catch (error) {
       throw this.handleError(error);
     }
@@ -1039,37 +1039,6 @@ export class SequelizePatrolRunRepository extends BaseRepository<PatrolRunModel>
       throw this.handleError(error);
     }
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-  /**
-   * Archive old completed patrol runs
-   */
-  async archiveOldCompleted(daysToKeep: number): Promise<number> {
-    try {
-      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
-
-      const deletedCount = await models.PatrolRun.destroy({
-        where: {
-          status: 'completed',
-          actual_end: {
-            [Op.lt]: cutoffDate,
-          },
-        },
-      });
-
-      return deletedCount;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-=======
->>>>>>> origin/db-logger-replacement-3863421860436406492
-=======
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-=======
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 }
 
 export default SequelizePatrolRunRepository;

@@ -8,23 +8,8 @@
  */
 
 import logger from '../config/logger.js';
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { getShiftService, getSessionService } from '../../core/services/index.js';
 import { diContainer } from '../database/repositories/index.js';
-import type { ILocationHistoryRepository } from '../../core/domain/repositories/ILocationHistoryRepository.js';
-import type { IPatrolRunRepository } from '../../core/domain/repositories/IPatrolRunRepository.js';
-=======
-import { getShiftService } from '../../core/services/index.js';
->>>>>>> origin/db-logger-replacement-3863421860436406492
-=======
-import { getShiftService } from '../../core/services/index.js';
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-=======
-import { getShiftService, getSessionService } from '../../core/services/index.js';
-import { diContainer } from '../database/repositories/index.js';
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
 
 /**
  * Scheduled Job Configuration
@@ -148,45 +133,7 @@ export class ScheduledJobsService {
     const intervalMs = this.config.cleanupOldRecordsInterval * 60 * 60 * 1000;
 
     const timer = setInterval(async () => {
-<<<<<<< HEAD
-      try {
-        logger.debug('Running cleanup job...');
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-        // 1. Delete old location history records (keep last 90 days as per recent requirements)
-        const locationRepo = diContainer.get<ILocationHistoryRepository>('locationHistoryRepository');
-        const deletedLocationCount = await locationRepo.deleteOldRecords(90);
-        logger.info(`Deleted ${deletedLocationCount} old location history records`);
-
-        // 2. Archive old completed patrols (keep last 90 days)
-        const patrolRepo = diContainer.get<IPatrolRunRepository>('patrolRunRepository');
-        const archivedPatrolCount = await patrolRepo.archiveOldCompleted(90);
-        logger.info(`Archived ${archivedPatrolCount} old completed patrols`);
-
-        // 3. Clean up expired sessions
-        const sessionService = getSessionService();
-        const cleanedSessionCount = await sessionService.cleanupExpiredSessions();
-        logger.info(`Cleaned up ${cleanedSessionCount} expired sessions`);
-
-=======
-=======
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-        // TODO: Implement cleanup logic for old records
-        // - Delete old location history records (keep last 30 days)
-        // - Archive old completed patrols
-        // - Clean up expired sessions
-<<<<<<< HEAD
->>>>>>> origin/db-logger-replacement-3863421860436406492
-=======
->>>>>>> dcffff9 (feat: implement session validation and fix CI failure)
-        logger.debug('Cleanup job completed');
-      } catch (error) {
-        logger.error('Error in cleanup job', { error });
-      }
-=======
       await this.executeCleanup();
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
     }, intervalMs);
 
     this.timers.set('cleanup', timer);
@@ -194,11 +141,9 @@ export class ScheduledJobsService {
   }
 
   /**
-<<<<<<< HEAD
-=======
    * Execute the cleanup logic
    * - Deletes old location history records
-   * - Archives old completed patrols (TODO in future if needed)
+   * - Archives old completed patrols
    * - Cleans up expired sessions
    */
   private async executeCleanup(): Promise<void> {
@@ -239,7 +184,6 @@ export class ScheduledJobsService {
   }
 
   /**
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
    * Job: Generate periodic reports
    * Runs every 6 hours to generate summary reports
    */
@@ -277,11 +221,7 @@ export class ScheduledJobsService {
         break;
 
       case 'cleanup':
-<<<<<<< HEAD
-        // TODO: Implement cleanup logic
-=======
         await this.executeCleanup();
->>>>>>> 177b868 (feat: implement cleanup logic for scheduled and manual execution)
         break;
 
       case 'reportGeneration':

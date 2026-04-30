@@ -1,0 +1,84 @@
+<%
+const isEdit = mode === 'edit';
+const values = site || {};
+const formErrors = errors || {};
+%>
+
+<div class="bg-white border-b border-secondary-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <h1 class="text-2xl font-bold text-secondary-900"><%= isEdit ? 'Edit Site' : 'Create Site' %></h1>
+    <p class="text-secondary-500 mt-1">Configure basic site information</p>
+  </div>
+</div>
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <form method="POST" action="<%= isEdit ? '/sites/' + values.id : '/sites' %>" class="card">
+    <div class="card-body space-y-4">
+      <% if (formErrors.general) { %>
+        <div class="p-3 rounded-lg bg-error-50 text-error-700 border border-error-200"><%= formErrors.general %></div>
+      <% } %>
+
+      <div class="input-group">
+        <label class="input-label" for="name">Site Name</label>
+        <input id="name" name="name" class="input" value="<%= values.name || '' %>" required>
+        <% if (formErrors.name) { %><p class="input-error"><%= formErrors.name %></p><% } %>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="code">Site Code</label>
+        <input id="code" name="code" class="input" value="<%= values.code || '' %>" required>
+        <% if (formErrors.code) { %><p class="input-error"><%= formErrors.code %></p><% } %>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="input-group">
+          <label class="input-label" for="city">City</label>
+          <input id="city" name="city" class="input" value="<%= values.city || '' %>">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="state">State</label>
+          <input id="state" name="state" class="input" value="<%= values.state || '' %>">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="address">Address</label>
+        <input id="address" name="address" class="input" value="<%= values.address || '' %>">
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="input-group">
+          <label class="input-label" for="country">Country</label>
+          <input id="country" name="country" class="input" value="<%= values.country || '' %>">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="status">Status</label>
+          <select id="status" name="status" class="input">
+            <option value="active" <%= values.status === 'active' || !values.status ? 'selected' : '' %>>Active</option>
+            <option value="inactive" <%= values.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+            <option value="under_maintenance" <%= values.status === 'under_maintenance' ? 'selected' : '' %>>Maintenance</option>
+            <option value="archived" <%= values.status === 'archived' ? 'selected' : '' %>>Archived</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="geofenceType">Geofence Type</label>
+          <select id="geofenceType" name="geofenceType" class="input">
+            <option value="circle" <%= values.geofenceType === 'circle' || !values.geofenceType ? 'selected' : '' %>>Circle</option>
+            <option value="polygon" <%= values.geofenceType === 'polygon' ? 'selected' : '' %>>Polygon</option>
+            <option value="rectangle" <%= values.geofenceType === 'rectangle' ? 'selected' : '' %>>Rectangle</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="allowedDistanceMeters">Allowed Distance (meters)</label>
+        <input id="allowedDistanceMeters" name="allowedDistanceMeters" type="number" min="0" max="500" class="input" value="<%= values.allowedDistanceMeters || 100 %>">
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <a href="/sites" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary"><%= isEdit ? 'Save Changes' : 'Create Site' %></button>
+      </div>
+    </div>
+  </form>
+</div>

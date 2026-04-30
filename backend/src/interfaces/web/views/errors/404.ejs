@@ -1,0 +1,74 @@
+<%
+/**
+ * 404 Not Found Error Page
+ *
+ * Displayed when a requested resource is not found
+ *
+ * @param {Object} error - Error details if available
+ * @param {string} title - Page title
+ */
+%>
+
+<!-- Page Header -->
+<div class="min-h-[500px] flex items-center justify-center bg-secondary-50 py-12 px-4">
+  <div class="max-w-md w-full">
+    <div class="card text-center">
+      <!-- Error Icon -->
+      <div class="mb-6">
+        <svg class="w-24 h-24 mx-auto text-secondary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+
+      <!-- Error Message -->
+      <h1 class="text-6xl font-bold text-secondary-900 mb-2">404</h1>
+      <h2 class="text-2xl font-semibold text-secondary-800 mb-4">Page Not Found</h2>
+
+      <p class="text-secondary-600 mb-8">
+        <%= error?.message || 'The user or page you are looking for does not exist or has been deleted.' %>
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="/users" class="btn btn-primary w-full sm:w-auto justify-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back to Users
+        </a>
+        <a href="/" class="btn btn-secondary w-full sm:w-auto justify-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7 7M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1v-3a1 1 0 011-1v-3a1 1 0 011-1v-3a1 1 0 01-1-1H2a1 1 0 01-1 1v9a1 1 0 001 1z"/>
+          </svg>
+          Dashboard
+        </a>
+      </div>
+
+      <!-- Helpful Tips -->
+      <div class="mt-8 pt-8 border-t border-secondary-200">
+        <h3 class="text-sm font-semibold text-secondary-700 mb-3">What can you do?</h3>
+        <ul class="text-sm text-secondary-600 space-y-2 text-left">
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-secondary-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 1 1 0 002zm0 0a1 1 0 102 1 1 0 01-2z" clip-rule="evenodd"/>
+            </svg>
+            Check if the URL was typed correctly
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-secondary-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 1 1 0 002zm0 0a1 1 0 102 1 1 0 01-2z" clip-rule="evenodd"/>
+            </svg>
+            Go to the users list to find the correct user
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-secondary-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 1 1 0 002zm0 0a1 1 0 102 1 1 0 01-2z" clip-rule="evenodd"/>
+            </svg>
+            Contact your administrator if you believe this is an error
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
