@@ -423,6 +423,76 @@ export class ShiftService {
   }
 
   /**
+   * Get weekly schedule — shifts for the 7-day week containing the given date.
+   * Week starts on Monday (ISO standard).
+   *
+   * @param referenceDate - Any date within the target week (defaults to today)
+   * @returns Object with weekStart, weekEnd, and shifts grouped by day
+   */
+  async getWeeklySchedule(referenceDate: Date = new Date()): Promise<{
+    weekStart: string;
+    weekEnd: string;
+    days: Array<{
+      date: string;
+      dayName: string;
+      shifts: IShift[];
+    }>;
+  }> {
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Compute Monday of the week
+    const d = new Date(referenceDate);
+    const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ...
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(d);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() + mondayOffset);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // Fetch all shifts in the date range
+    const result = await this.shiftRepository.findAll({
+      startDate: monday,
+      endDate: sunday,
+      limit: 500,
+    });
+
+    // Group by day
+    const days: Map<string, IShift[]> = new Map();
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(monday);
+      dayDate.setDate(monday.getDate() + i);
+      const key = dayDate.toISOString().split('T')[0];
+      days.set(key, []);
+    }
+
+    for (const shift of result.data) {
+      const shiftDate = new Date(shift.scheduledStart).toISOString().split('T')[0];
+      const list = days.get(shiftDate);
+      if (list) {
+        list.push(shift);
+      }
+    }
+
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = new Date(monday);
+    weekEnd.setDate(monday.getDate() + 6);
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+    return {
+      weekStart,
+      weekEnd: weekEndStr,
+      days: Array.from(days.entries()).map(([date, shifts]) => ({
+        date,
+        dayName: DAY_NAMES[new Date(date + 'T00:00:00').getDay()],
+        shifts,
+      })),
+    };
+  }
+
+  /**
    * Get missed shifts for a date
    *
    * @param date - Date to get missed shifts for

@@ -371,17 +371,20 @@ export class ShiftController {
   }
 
   /**
-   * Get scheduled shifts for a date
+   * Get weekly schedule — shifts for the week containing the given date
    * GET /api/shifts/scheduled?date=2024-01-01
+   *
+   * Returns shifts for Mon–Sun of the week containing the requested date,
+   * grouped by day. If no date is provided, uses the current week.
    */
   async getScheduledShifts(req: Request, res: Response): Promise<void> {
     try {
-      const date = req.query.date ? new Date(req.query.date as string) : new Date();
-      const shifts = await getShiftService().getScheduledShifts(date);
-      res.status(200).json({ shifts, count: shifts.length });
+      const referenceDate = req.query.date ? new Date(req.query.date as string) : new Date();
+      const weeklySchedule = await getShiftService().getWeeklySchedule(referenceDate);
+      res.status(200).json(weeklySchedule);
     } catch (error) {
-      console.error('Error getting scheduled shifts:', error);
-      res.status(500).json({ error: 'Failed to get scheduled shifts' });
+      console.error('Error getting weekly schedule:', error);
+      res.status(500).json({ error: 'Failed to get weekly schedule' });
     }
   }
 
