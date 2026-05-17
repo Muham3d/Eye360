@@ -80,11 +80,17 @@ export function createApp(): Application {
   });
 
   // Serve static assets
-  app.use('/assets', express.static(path.join(__dirname, '../interfaces/web/public/assets')));
+  app.use('/assets', express.static(path.join(__dirname, 'interfaces/web/public/assets')));
 
   // Serve favicon.ico from the root
   app.get('/favicon.ico', (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../interfaces/web/public/assets/favicon.ico'));
+    const faviconPath = path.join(__dirname, 'interfaces/web/public/assets/favicon.ico');
+    res.sendFile(faviconPath, (err) => {
+      if (err) {
+        // If favicon doesn't exist, send 204 No Content instead of 500
+        res.status(204).end();
+      }
+    });
   });
 
   // Health check endpoint

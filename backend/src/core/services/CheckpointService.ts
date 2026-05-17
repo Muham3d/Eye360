@@ -39,11 +39,20 @@ export class CheckpointService {
   }
 
   async deleteCheckpoint(id: number): Promise<boolean> {
+    const existing = await this.checkpointRepository.findById(id);
+    if (!existing) throw new NotFoundError(`Checkpoint with ID ${id} not found`);
     return this.checkpointRepository.delete(id);
   }
 
   async getCheckpointsBySite(siteId: number) {
     return this.checkpointRepository.findBySiteId(siteId);
+  }
+
+  async reorderCheckpoints(siteId: number, orders: Array<{ id: number; orderIndex: number }>): Promise<void> {
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+      throw new ValidationError('Orders array is required');
+    }
+    await this.checkpointRepository.reorderCheckpoints(siteId, orders);
   }
 }
 

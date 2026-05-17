@@ -11,7 +11,7 @@ import {
   NotFoundError,
 } from '../domain/errors/index.js';
 import type { ISiteRepository } from '../domain/repositories/ISiteRepository.js';
-import type { ISite, ICreateSiteDTO, IUpdateSiteDTO, ISiteQueryOptions } from '../domain/entities/Site.js';
+import type { ISite, ICreateSiteDTO, IUpdateSiteDTO, ISiteQueryOptions, ISiteStatistics } from '../domain/entities/Site.js';
 
 export class SiteService {
   constructor(private readonly siteRepository: ISiteRepository) {}
@@ -26,7 +26,7 @@ export class SiteService {
   async updateSite(id: number, data: IUpdateSiteDTO): Promise<ISite> {
     const existing = await this.siteRepository.findById(id);
     if (!existing) throw new NotFoundError(`Site with ID ${id} not found`);
-    
+
     const updated = await this.siteRepository.update(id, data);
     if (!updated) throw new Error('Failed to update site');
     return updated;
@@ -41,7 +41,15 @@ export class SiteService {
   }
 
   async deleteSite(id: number): Promise<boolean> {
+    const existing = await this.siteRepository.findById(id);
+    if (!existing) throw new NotFoundError(`Site with ID ${id} not found`);
     return this.siteRepository.delete(id);
+  }
+
+  async getSiteStatistics(id: number): Promise<ISiteStatistics> {
+    const existing = await this.siteRepository.findById(id);
+    if (!existing) throw new NotFoundError(`Site with ID ${id} not found`);
+    return this.siteRepository.getStatistics(id);
   }
 }
 

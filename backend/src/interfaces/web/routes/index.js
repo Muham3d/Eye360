@@ -40,19 +40,46 @@ router.use(validateSession);
  * @route   GET /
  * @desc    Dashboard home page
  */
-router.get('/', requireAuth, (req, res) => {
-  const stats = {
-    activeGuards: 24,
-    activeSites: 8,
-    patrolsToday: 156,
-    openIncidents: 3,
-    recentActivity: [],
-  };
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const { getShiftService } = await import('../../../core/services/ShiftService.js');
+    const { getIncidentService } = await import('../../../core/services/IncidentService.js');
 
-  renderView(res, 'dashboard/index', {
-    title: 'Dashboard - PatrolManager',
-    stats,
-  });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    let stats = {
+      activeGuards: 0,
+      activeSites: 0,
+      patrolsToday: 0,
+      openIncidents: 0,
+      recentActivity: [],
+    };
+
+    try {
+      const shiftService = getShiftService();
+      const activeShifts = await shiftService.getActiveShifts();
+      stats.activeGuards = activeShifts.length;
+    } catch (_) {}
+
+    try {
+      const incidentService = getIncidentService();
+      const incidentStats = await incidentService.getStatistics();
+      stats.openIncidents = (incidentStats.byStatus?.new || 0) + (incidentStats.byStatus?.investigating || 0);
+    } catch (_) {}
+
+    renderView(res, 'dashboard/index', {
+      title: 'Dashboard - PatrolManager',
+      stats,
+    });
+  } catch (error) {
+    renderView(res, 'dashboard/index', {
+      title: 'Dashboard - PatrolManager',
+      stats: { activeGuards: 0, activeSites: 0, patrolsToday: 0, openIncidents: 0, recentActivity: [] },
+    });
+  }
 });
 
 /**
@@ -102,6 +129,32 @@ router.post('/reports/generate', requireAuth, requireRole('admin', 'manager'), w
 router.get('/login', redirectIfAuthenticated, webAuthController.getLogin);
 router.post('/login', webAuthController.postLogin);
 router.post('/logout', webAuthController.postLogout);
+router.get('/forgot-password', redirectIfAuthenticated, webAuthController.getForgotPassword);
+router.post('/forgot-password', webAuthController.postForgotPassword);
+router.get('/reset-password', webAuthController.getResetPassword);
+router.get('/reset-password/:token', webAuthController.getResetPassword);
+router.post('/reset-password', webAuthController.postResetPassword);
+
+/**
+ * Profile & Settings Routes
+ */
+router.get('/profile', requireAuth, (req, res) => {
+  renderView(res, 'system/placeholder', {
+    title: 'Profile - PatrolManager',
+    pageTitle: 'Your Profile',
+    pageDescription: 'Manage your account settings and preferences.',
+    featurePath: '/profile',
+  });
+});
+
+router.get('/settings', requireAuth, requireRole('admin'), (req, res) => {
+  renderView(res, 'system/placeholder', {
+    title: 'Settings - PatrolManager',
+    pageTitle: 'System Settings',
+    pageDescription: 'Configure system-wide settings and preferences.',
+    featurePath: '/settings',
+  });
+});
 
 /**
  * User Management Routes

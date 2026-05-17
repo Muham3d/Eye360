@@ -18,6 +18,7 @@ import type {
 import type {
   IIncidentStatistics,
 } from '../domain/entities/Incident.js';
+import ExcelJS from 'exceljs';
 
 /**
  * Report Date Range
@@ -413,23 +414,60 @@ export class ReportService {
   }
 
   /**
-   * Export data to Excel format (simplified as CSV with .xlsx extension)
-   * For full Excel support, consider using a library like 'exceljs'
-   *
-   * @param data - Array of objects to export
-   * @param filename - Output filename
-   * @returns Export result with Excel data
+   * Export data to real Excel format using exceljs
    */
-  async exportToExcel(data: Record<string, any>[], filename: string): Promise<IExportResult> {
-    // For now, use CSV format but with .xlsx extension
-    // In production, use 'exceljs' or similar for true Excel files
-    const csvResult = await this.exportToCSV(data, filename);
+  async exportToExcel(data: Record<string, any>[], filename: string, sheetName: string = 'Report'): Promise<IExportResult> {
+    if (!data || data.length === 0) {
+      throw new Error('No data to export');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'PatrolManager';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet(sheetName);
+
+    // Add headers
+    const headers = Object.keys(data[0]);
+    const headerRow = worksheet.addRow(headers);
+    headerRow.font = { bold: true, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4F46E5' },
+    };
+    headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+
+    // Add data rows
+    for (const row of data) {
+      const values = headers.map((h) => {
+        const val = row[h];
+        if (val instanceof Date) return val.toISOString();
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'object') return JSON.stringify(val);
+        return val;
+      });
+      worksheet.addRow(values);
+    }
+
+    // Auto-fit column widths
+    worksheet.columns.forEach((col) => {
+      let maxLen = 10;
+      col.eachCell?.({ includeEmpty: false }, (cell) => {
+        const len = String(cell.value || '').length;
+        if (len > maxLen) maxLen = Math.min(len + 2, 50);
+      });
+      col.width = maxLen;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
 
     return {
-      ...csvResult,
       format: ExportFormat.EXCEL,
       filename: `${filename}.xlsx`,
+      data: Buffer.from(buffer),
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      size: buffer.byteLength,
     };
   }
 

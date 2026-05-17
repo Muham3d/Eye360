@@ -23,7 +23,20 @@ import type {
 import type { IIncidentRepository } from '../domain/repositories/IIncidentRepository.js';
 import { RealTimeService } from './RealTimeService.js';
 import { FileStorageService } from './FileStorageService.js';
+import { config } from '../../infrastructure/config/env.js';
 import logger from '../../infrastructure/config/logger.js';
+
+interface EscalationConfig {
+  criticalMinutes: number;
+  highMinutes: number;
+  mediumMinutes: number;
+}
+
+const DEFAULT_ESCALATION: EscalationConfig = {
+  criticalMinutes: config.business.incidentEscalationCriticalMinutes,
+  highMinutes: config.business.incidentEscalationHighMinutes,
+  mediumMinutes: config.business.incidentEscalationMediumMinutes,
+};
 
 /**
  * Incident Service Class
@@ -248,6 +261,70 @@ export class IncidentService {
    */
   async getIncidentsByReporter(userId: number): Promise<IIncident[]> {
     return await this.incidentRepository.findByReporter(userId);
+  }
+
+  /**
+   * Get incidents requiring escalation
+   * Called periodically by background job
+   */
+  async getEscalatableIncidents(): Promise<IIncident[]> {
+    const openIncidents = await this.incidentRepository.findAll({
+      status: [IncidentStatus.NEW, IncidentStatus.INVESTIGATING] as any,
+      limit: 100,
+    });
+
+    const now = new Date();
+    return openIncidents.data.filter((incident) => {
+      const created = new Date(incident.createdAt);
+      const minutesSinceCreation = (now.getTime() - created.getTime()) / 60000;
+      const threshold = this.getEscalationThreshold(incident.priority as IncidentPriority);
+      return minutesSinceCreation >= threshold;
+    });
+  }
+
+  /**
+   * Run escalation check — escalate overdue incidents
+   */
+  async runEscalationCheck(): Promise<number> {
+    const escalatable = await this.getEscalatableIncidents();
+    let escalated = 0;
+
+    for (const incident of escalatable) {
+      try {
+        if (incident.status === IncidentStatus.NEW) {
+          await this.incidentRepository.update(incident.id, {
+            status: IncidentStatus.INVESTIGATING,
+          });
+          await this.incidentRepository.addComment(
+            incident.id,
+            0,
+            `Auto-escalated: no response within ${this.getEscalationThreshold(incident.priority as IncidentPriority)} minutes`
+          );
+          this.notifyIncidentEscalated(incident);
+          escalated++;
+        }
+      } catch (error) {
+        logger.warn(`Failed to escalate incident ${incident.id}:`, error);
+      }
+    }
+
+    if (escalated > 0) {
+      logger.info(`Auto-escalated ${escalated} incidents`);
+    }
+    return escalated;
+  }
+
+  private getEscalationThreshold(priority: IncidentPriority): number {
+    switch (priority) {
+      case IncidentPriority.CRITICAL: return DEFAULT_ESCALATION.criticalMinutes;
+      case IncidentPriority.HIGH: return DEFAULT_ESCALATION.highMinutes;
+      case IncidentPriority.MEDIUM: return DEFAULT_ESCALATION.mediumMinutes;
+      default: return DEFAULT_ESCALATION.mediumMinutes;
+    }
+  }
+
+  private notifyIncidentEscalated(incident: IIncident): void {
+    logger.warn(`ESCALATION: Incident ${incident.id} (${incident.priority}) auto-escalated`);
   }
 
   /**

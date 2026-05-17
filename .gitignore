@@ -125,3 +125,16 @@ site/
 .dynamodb/
 .tern-port
 backend/.jest-cache
+
+# -----------------------------------------------------------------------------
+# Tool Scaffolding (speckit, opencode, orchestration, gates)
+# -----------------------------------------------------------------------------
+.agent/
+.gates/
+.orchestration/
+.specify/
+.opencode/
+agents.zip
+PROJECT_STATE.json
+TASK_TRACKER.md
+QUICKSTART.md

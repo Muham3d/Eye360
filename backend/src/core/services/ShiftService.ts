@@ -301,9 +301,27 @@ export class ShiftService {
    * @returns Created shift
    */
   async createShift(data: ICreateShiftDTO): Promise<IShift> {
-    // Validate scheduled times
     if (data.scheduledEnd <= data.scheduledStart) {
       throw new ValidationError('Scheduled end time must be after start time');
+    }
+
+    // Check for overlapping shifts for the same guard
+    const guardShifts = await this.shiftRepository.findByGuard(data.guardId, {
+      start: data.scheduledStart,
+      end: data.scheduledEnd,
+    });
+
+    const hasOverlap = guardShifts.data.some((existing) => {
+      if (existing.status === ShiftStatus.CANCELLED) return false;
+      const existingStart = new Date(existing.scheduledStart).getTime();
+      const existingEnd = new Date(existing.scheduledEnd).getTime();
+      const newStart = new Date(data.scheduledStart).getTime();
+      const newEnd = new Date(data.scheduledEnd).getTime();
+      return newStart < existingEnd && newEnd > existingStart;
+    });
+
+    if (hasOverlap) {
+      throw new ConflictError('Guard already has a shift scheduled during this time period');
     }
 
     return this.shiftRepository.create(data);

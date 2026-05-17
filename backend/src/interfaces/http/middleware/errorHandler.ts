@@ -128,6 +128,15 @@ function logError(error: Error, req: Request): void {
 }
 
 /**
+ * Check if request is an API request (expects JSON response)
+ */
+function isApiRequest(req: Request): boolean {
+  return req.path.startsWith('/api/') ||
+    req.xhr ||
+    (req.headers.accept && req.headers.accept.includes('application/json'));
+}
+
+/**
  * Global error handler middleware
  */
 export function errorHandler(
@@ -139,12 +148,37 @@ export function errorHandler(
   // Log the error
   logError(error, req);
 
-  // Format and send error response
-  const errorResponse = formatError(error, req);
-
   const statusCode = error instanceof AppError ? error.statusCode : 500;
 
-  res.status(statusCode).json(errorResponse);
+  // For API requests, return JSON error response
+  if (isApiRequest(req)) {
+    const errorResponse = formatError(error, req);
+    res.status(statusCode).json(errorResponse);
+    return;
+  }
+
+  // For web/static file requests, return appropriate error page or status
+  if (statusCode === 404) {
+    res.status(404).render('errors/404', {
+      title: 'Not Found',
+      message: 'The page you are looking for does not exist.',
+    });
+    return;
+  }
+
+  if (statusCode === 403) {
+    res.status(403).render('errors/403', {
+      title: 'Access Denied',
+      message: 'You do not have permission to access this resource.',
+    });
+    return;
+  }
+
+  // For 500 and other errors on web requests, render error page
+  res.status(statusCode).render('errors/500', {
+    title: 'Server Error',
+    message: config.server.isDevelopment ? error.message : 'An unexpected error occurred. Please try again later.',
+  });
 }
 
 /**

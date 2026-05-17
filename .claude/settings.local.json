@@ -46,7 +46,8 @@
       "Bash(cd \"C:/Users/Mohamed/Desktop/Projects/PatrolManager/backend\" && npx tsx create-admin-using-models.mjs 2>&1)",
       "Bash(netstat -ano | findstr :3000 | head -2 && taskkill //F //PID 15332 2>&1 && sleep 1 && cd \"C:/Users/Mohamed/Desktop/Projects/PatrolManager/backend\" && npx tsx ./src/server.ts 2>&1)",
       "Bash(taskkill //F //PID 5140 2>&1 && sleep 2 && cd \"C:/Users/Mohamed/Desktop/Projects/PatrolManager/backend\" && npx tsx ./src/server.ts 2>&1)",
-      "Bash(cd \"C:/Users/Mohamed/Desktop/Projects/PatrolManager/backend\" && npx *)"
+      "Bash(cd \"C:/Users/Mohamed/Desktop/Projects/PatrolManager/backend\" && npx *)",
+      "Bash(cd *)"
     ]
   }
 }

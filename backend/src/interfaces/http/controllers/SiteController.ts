@@ -11,23 +11,9 @@ import { getSiteService } from '../../../core/services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 export class SiteController {
-    /**
-     * Create a new site
-     */
     createSite = asyncHandler(async (req: Request, res: Response): Promise<void> => {
         const service = getSiteService();
-        const user = (req as any).user;
-
-        if (!user?.tenantId) {
-            res.status(400).json({ success: false, message: 'Tenant context is missing' });
-            return;
-        }
-
-        const site = await service.createSite({
-            ...req.body,
-            tenantId: user.tenantId,
-            createdById: user.id
-        });
+        const site = await service.createSite(req.body);
 
         res.status(201).json({
             success: true,
@@ -35,99 +21,56 @@ export class SiteController {
         });
     });
 
-    /**
-     * List all sites for current tenant
-     */
     listSites = asyncHandler(async (req: Request, res: Response): Promise<void> => {
         const service = getSiteService();
-        const user = (req as any).user;
-
-        if (!user?.tenantId) {
-            res.status(400).json({ success: false, message: 'Tenant context is missing' });
-            return;
-        }
-
-        const sites = await service.listSites(user.tenantId, req.query);
-
-        res.status(200).json({
-            success: true,
-            data: sites
+        const { page, limit, status, search, sortBy, sortOrder } = req.query;
+        const sites = await service.listSites({
+            page: page ? parseInt(page as string, 10) : undefined,
+            limit: limit ? parseInt(limit as string, 10) : undefined,
+            status: status as any,
+            search: search as string,
+            sortBy: sortBy as any,
+            sortOrder: sortOrder as any,
         });
+
+        res.status(200).json({ success: true, data: sites });
     });
 
-    /**
-     * Get specific site details
-     */
     getSiteDetails = asyncHandler(async (req: Request, res: Response): Promise<void> => {
         const service = getSiteService();
-        const user = (req as any).user;
         const siteId = parseInt(req.params.id, 10);
-
-        if (!user?.tenantId) {
-            res.status(400).json({ success: false, message: 'Tenant context is missing' });
-            return;
-        }
-
-        const site = await service.getSiteById(siteId, user.tenantId);
+        const site = await service.getSiteById(siteId);
 
         if (!site) {
-            res.status(404).json({
-                success: false,
-                message: 'Site not found'
-            });
+            res.status(404).json({ success: false, message: 'Site not found' });
             return;
         }
 
-        res.status(200).json({
-            success: true,
-            data: site
-        });
+        res.status(200).json({ success: true, data: site });
     });
 
-    /**
-     * Update a site
-     */
     updateSite = asyncHandler(async (req: Request, res: Response): Promise<void> => {
         const service = getSiteService();
-        const user = (req as any).user;
         const siteId = parseInt(req.params.id, 10);
+        const site = await service.updateSite(siteId, req.body);
 
-        if (!user?.tenantId) {
-            res.status(400).json({ success: false, message: 'Tenant context is missing' });
-            return;
-        }
-
-        const site = await service.updateSite(siteId, user.tenantId, req.body);
-
-        res.status(200).json({
-            success: true,
-            data: site
-        });
+        res.status(200).json({ success: true, data: site });
     });
 
-    /**
-     * Delete a site
-     */
     deleteSite = asyncHandler(async (req: Request, res: Response): Promise<void> => {
         const service = getSiteService();
-        const user = (req as any).user;
         const siteId = parseInt(req.params.id, 10);
-
-        if (!user?.tenantId) {
-            res.status(400).json({ success: false, message: 'Tenant context is missing' });
-            return;
-        }
-
-        await service.deleteSite(siteId, user.tenantId);
+        await service.deleteSite(siteId);
 
         res.status(204).end();
     });
 
-    /**
-     * Get site statistics
-     */
-    getSiteStatistics = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-        res.status(501).json({ message: 'Not implemented' });
+    getSiteStatistics = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        const service = getSiteService();
+        const siteId = parseInt(req.params.id, 10);
+        const stats = await service.getSiteStatistics(siteId);
+
+        res.status(200).json({ success: true, data: stats });
     });
 }
 

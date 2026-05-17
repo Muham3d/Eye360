@@ -139,7 +139,7 @@ export class PatrolExecutionService {
       throw new NotFoundError(`Checkpoint details not found`);
     }
 
-    // 4. Validate Sequence (Optional based on business rules)
+    // 4. Validate Sequence — enforce strict order on sequential templates
     const lastVerified = await this.checkpointLogRepository.findLatestVerified(patrolRunId);
     const isValidSequence = await this.patrolCheckpointRepository.isValidNextCheckpoint(
       patrolRun.templateId,
@@ -147,8 +147,19 @@ export class PatrolExecutionService {
       lastVerified ? lastVerified.checkpointId : null
     );
 
-    // If sequential is strictly enforced, we would throw here. 
-    // For now, we'll allow out-of-order but log it or handle it in completion logic.
+    if (!isValidSequence) {
+      const template = patrolRun as any;
+      if (template.isSequential || template.enforceSequence) {
+        const expected = checkpoints.find(cp => {
+          const logs2 = cp as any;
+          return !logs2.isVerified;
+        });
+        const expectedName = expected ? (expected as any).name || `#${(expected as any).orderIndex}` : 'unknown';
+        throw new ValidationError(
+          `Sequential patrol: must verify checkpoints in order. Expected checkpoint: ${expectedName}`
+        );
+      }
+    }
 
     // 5. Perform Geospatial Verification if GPS type
     if (verificationType === 'gps') {

@@ -23,6 +23,7 @@ router.use(requireRole('admin', 'manager'));
 router.get('/', SiteController.listSites);
 router.post('/', SiteController.createSite);
 router.get('/:id', SiteController.getSiteDetails);
+router.get('/:id/statistics', SiteController.getSiteStatistics);
 router.patch('/:id', SiteController.updateSite);
 router.delete('/:id', SiteController.deleteSite);
 

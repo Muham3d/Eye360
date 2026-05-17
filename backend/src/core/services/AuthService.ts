@@ -125,6 +125,17 @@ interface LoginRateLimitEntry {
 const loginRateLimits = new Map<string, LoginRateLimitEntry>();
 
 /**
+ * Password reset token storage
+ */
+interface PasswordResetEntry {
+  userId: number;
+  tokenHash: string;
+  expiresAt: Date;
+  used: boolean;
+}
+const passwordResetTokens = new Map<string, PasswordResetEntry>();
+
+/**
  * Authentication service configuration
  */
 interface AuthServiceConfig {
@@ -555,54 +566,45 @@ export class AuthService {
   async forgotPassword(email: string): Promise<PasswordResetRequestResult> {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find user
     const user = await this.userRepository.findByEmail(normalizedEmail);
 
-    // Always return success to prevent email enumeration
-    if (!user) {
-      return {
-        success: true,
-        error: undefined, // Don't reveal if email exists
-      };
+    if (!user || user.status !== 'active') {
+      return { success: true };
     }
 
-    // Check if account is active
-    if (user.status !== 'active') {
-      return {
-        success: true,
-        error: undefined,
-      };
+    // Invalidate any existing reset tokens for this user
+    for (const [key, entry] of passwordResetTokens.entries()) {
+      if (entry.userId === user.id && !entry.used) {
+        entry.used = true;
+      }
     }
 
-    // Generate reset token
-    const resetToken = this.passwordService.generatePasswordResetToken(user.id);
-
-    // Calculate expiration
+    const resetToken = this.passwordService.generateUrlSafeToken(48);
+    const tokenHash = await this.passwordService.hashToken(resetToken);
     const expiresAt = new Date(
       Date.now() + this.config.passwordResetExpirationHours * 60 * 60 * 1000
     );
 
-    // In a real implementation, store the token hash and send email
-    // For now, we'll return the token (should be sent via email)
-    // TODO: Implement email sending service
-    // TODO: Store reset token in database with expiration
+    passwordResetTokens.set(resetToken, {
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+      used: false,
+    });
 
+    // TODO: Send reset email via email service in production
+    // For now, return the token so the caller can deliver it
     return {
       success: true,
-      resetToken, // Remove this in production, send via email
+      resetToken,
       expiresAt,
     };
   }
 
   /**
    * Reset password with token
-   *
-   * @param resetToken - Password reset token
-   * @param newPassword - New password
-   * @returns Password reset result
    */
   async resetPassword(resetToken: string, newPassword: string): Promise<PasswordResetResult> {
-    // Validate new password
     const passwordValidation = this.passwordService.validatePassword(newPassword);
     if (!passwordValidation.valid) {
       return {
@@ -611,14 +613,37 @@ export class AuthService {
       };
     }
 
-    // TODO: Verify reset token from database
-    // TODO: Check token expiration
-    // For now, this is a placeholder implementation
+    const entry = passwordResetTokens.get(resetToken);
+    if (!entry) {
+      return { success: false, error: 'Invalid or expired reset token' };
+    }
 
-    return {
-      success: false,
-      error: 'Password reset not fully implemented. TODO: Implement token verification',
-    };
+    if (entry.used) {
+      return { success: false, error: 'Reset token has already been used' };
+    }
+
+    if (entry.expiresAt < new Date()) {
+      entry.used = true;
+      return { success: false, error: 'Reset token has expired' };
+    }
+
+    const isValid = await this.passwordService.verifyToken(resetToken, entry.tokenHash);
+    if (!isValid) {
+      return { success: false, error: 'Invalid reset token' };
+    }
+
+    const passwordHash = await this.passwordService.hashPassword(newPassword);
+    const updated = await this.userRepository.changePassword(entry.userId, passwordHash);
+
+    if (!updated) {
+      return { success: false, error: 'Failed to update password' };
+    }
+
+    entry.used = true;
+    await this.userRepository.revokeAllUserSessions(entry.userId);
+    await this.userRepository.resetFailedLoginAttempts(entry.userId);
+
+    return { success: true };
   }
 
   /**

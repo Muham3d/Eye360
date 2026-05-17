@@ -103,6 +103,23 @@ interface LoggingConfig {
 }
 
 /**
+ * Business configuration interface
+ */
+interface BusinessConfig {
+  defaultShiftDurationHours: number;
+  lateToleranceMinutes: number;
+  missedShiftToleranceMinutes: number;
+  maxShiftsPerGuardPerDay: number;
+  gpsMaxVelocityMs: number;
+  geofenceBufferMeters: number;
+  gpsAccuracyWarningMeters: number;
+  gpsAccuracyMaxMeters: number;
+  incidentEscalationCriticalMinutes: number;
+  incidentEscalationHighMinutes: number;
+  incidentEscalationMediumMinutes: number;
+}
+
+/**
  * Complete application configuration interface
  */
 export interface AppConfig {
@@ -113,6 +130,7 @@ export interface AppConfig {
   cors: CORSConfig;
   rateLimit: RateLimitConfig;
   logging: LoggingConfig;
+  business: BusinessConfig;
 }
 
 /**
@@ -248,6 +266,21 @@ function createConfig(): AppConfig {
     maxSize: getEnvOrDefault('LOG_MAX_SIZE', '20m'),
   };
 
+  // Business logic configuration
+  const business: BusinessConfig = {
+    defaultShiftDurationHours: getEnvNumberOrDefault('BUSINESS_DEFAULT_SHIFT_HOURS', 8),
+    lateToleranceMinutes: getEnvNumberOrDefault('BUSINESS_LATE_TOLERANCE_MINUTES', 5),
+    missedShiftToleranceMinutes: getEnvNumberOrDefault('BUSINESS_MISSED_SHIFT_TOLERANCE_MINUTES', 15),
+    maxShiftsPerGuardPerDay: getEnvNumberOrDefault('BUSINESS_MAX_SHIFTS_PER_DAY', 2),
+    gpsMaxVelocityMs: getEnvNumberOrDefault('BUSINESS_GPS_MAX_VELOCITY_MS', 5),
+    geofenceBufferMeters: getEnvNumberOrDefault('BUSINESS_GEOFENCE_BUFFER_METERS', 5),
+    gpsAccuracyWarningMeters: getEnvNumberOrDefault('BUSINESS_GPS_ACCURACY_WARNING', 10),
+    gpsAccuracyMaxMeters: getEnvNumberOrDefault('BUSINESS_GPS_ACCURACY_MAX', 20),
+    incidentEscalationCriticalMinutes: getEnvNumberOrDefault('BUSINESS_ESCALATION_CRITICAL_MIN', 15),
+    incidentEscalationHighMinutes: getEnvNumberOrDefault('BUSINESS_ESCALATION_HIGH_MIN', 60),
+    incidentEscalationMediumMinutes: getEnvNumberOrDefault('BUSINESS_ESCALATION_MEDIUM_MIN', 240),
+  };
+
   return {
     server,
     database,
@@ -256,6 +289,7 @@ function createConfig(): AppConfig {
     cors,
     rateLimit,
     logging,
+    business,
   };
 }
 
