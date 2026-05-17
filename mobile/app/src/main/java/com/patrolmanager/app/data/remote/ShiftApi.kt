@@ -1,17 +1,19 @@
 package com.patrolmanager.app.data.remote
 
+import com.patrolmanager.app.data.remote.dto.*
 import retrofit2.http.*
 
 interface ShiftApi {
-    @GET("shifts")
-    suspend fun getShifts(): ApiResponse<List<ShiftDto>>
 
-    @POST("shifts/clock-in")
-    suspend fun clockIn(@Body location: LocationDto): ApiResponse<ShiftDto>
-
-    @POST("shifts/clock-out")
-    suspend fun clockOut(@Body location: LocationDto): ApiResponse<ShiftDto>
+    @GET("shifts/scheduled")
+    suspend fun getWeeklySchedule(@Query("date") date: String? = null): WeeklyScheduleResponse
 
     @GET("shifts/active")
-    suspend fun getActiveShift(): ApiResponse<ShiftDto>
+    suspend fun getActiveShift(): ShiftDto
+
+    @POST("shifts/clock-in")
+    suspend fun clockIn(@Body request: ClockInRequest): ClockInResponse
+
+    @POST("shifts/clock-out")
+    suspend fun clockOut(@Body request: ClockOutRequest): ClockOutResponse
 }
