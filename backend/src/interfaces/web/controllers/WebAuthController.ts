@@ -7,8 +7,9 @@
  * @module interfaces/web/controllers/WebAuthController
  */
 
+import { Request, Response, NextFunction } from 'express';
 import { setFlashMessage, renderView } from '../config/ejs.js';
-import { getAuthService } from '@core/services/index.js';
+import { getAuthService } from '../../../core/services/index.js';
 
 /**
  * Web Auth Controller
@@ -18,16 +19,17 @@ export class WebAuthController {
    * GET /login
    * Render login page
    */
-  getLogin = (req, res) => {
+  getLogin = (req: Request, res: Response): void => {
     // Redirect if already authenticated
-    if (req.session?.user) {
+    const session = req.session as any;
+    if (session?.user) {
       return res.redirect('/');
     }
 
     renderView(res, 'auth/login', {
       title: 'Sign In - PatrolManager',
-      email: req.session?.email || '',
-      csrfToken: req.csrfToken?.() || '',
+      email: session?.email || '',
+      csrfToken: (req as any).csrfToken?.() || '',
       currentPath: '/login',
     });
   };
@@ -36,14 +38,15 @@ export class WebAuthController {
    * POST /login
    * Handle login form submission
    */
-  postLogin = async (req, res, next) => {
+  postLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password, remember } = req.body;
+      const session = req.session as any;
 
       // Validate input
       if (!email || !password) {
-        if (req.session) {
-          req.session.email = email;
+        if (session) {
+          session.email = email;
         }
         setFlashMessage(req, 'error', 'Please enter both email and password');
         return res.redirect('/login');
@@ -53,8 +56,8 @@ export class WebAuthController {
       const result = await authService.loginWeb({ email, password });
 
       if (!result.success) {
-        if (req.session) {
-          req.session.email = email;
+        if (session) {
+          session.email = email;
         }
 
         // Handle specific error messages
@@ -83,9 +86,9 @@ export class WebAuthController {
       // Set session
       const maxAge = remember ? 30 * 24 * 60 * 60 * 1000 : undefined; // 30 days or session default
 
-      if (req.session) {
-        req.session.token = result.sessionToken;
-        req.session.user = {
+      if (session) {
+        session.token = result.sessionToken;
+        session.user = {
           id: result.user.id,
           email: result.user.email,
           firstName: result.user.firstName,
@@ -93,17 +96,24 @@ export class WebAuthController {
           role: result.user.roleName,
         };
 
-        if (maxAge && req.session.cookie) {
-          req.session.cookie.maxAge = maxAge;
+        if (maxAge && session.cookie) {
+          session.cookie.maxAge = maxAge;
         }
 
         // Save session explicitly before redirect
-        await req.session.save();
+        await new Promise<void>((resolve, reject) => {
+          session.save((err: any) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
       }
 
       // Redirect to original URL or dashboard
-      const redirectTo = req.session?.returnTo || '/';
-      delete req.session?.returnTo;
+      const redirectTo = session?.returnTo || '/';
+      if (session) {
+        delete session.returnTo;
+      }
 
       setFlashMessage(req, 'success', 'Welcome back! You have successfully signed in.');
       res.redirect(redirectTo);
@@ -116,9 +126,10 @@ export class WebAuthController {
    * POST /logout
    * Handle logout
    */
-  postLogout = async (req, res, next) => {
+  postLogout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const sessionToken = req.session?.token;
+      const session = req.session as any;
+      const sessionToken = session?.token;
 
       if (sessionToken) {
         const authService = getAuthService();
@@ -126,11 +137,16 @@ export class WebAuthController {
       }
 
       // Destroy session
-      req.session?.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-        }
-      });
+      if (session) {
+        await new Promise<void>((resolve) => {
+          session.destroy((err: any) => {
+            if (err) {
+              console.error('Error destroying session:', err);
+            }
+            resolve();
+          });
+        });
+      }
 
       res.clearCookie('connect.sid');
       setFlashMessage(req, 'success', 'You have been logged out successfully.');
@@ -144,11 +160,11 @@ export class WebAuthController {
    * GET /forgot-password
    * Render forgot password page
    */
-  getForgotPassword = (req, res) => {
+  getForgotPassword = (req: Request, res: Response): void => {
     renderView(res, 'auth/forgot-password', {
       title: 'Forgot Password - PatrolManager',
       email: req.query.email || '',
-      csrfToken: req.csrfToken?.() || '',
+      csrfToken: (req as any).csrfToken?.() || '',
       currentPath: '/forgot-password',
     });
   };
@@ -157,7 +173,7 @@ export class WebAuthController {
    * POST /forgot-password
    * Handle forgot password form submission
    */
-  postForgotPassword = async (req, res, next) => {
+  postForgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email } = req.body;
 
@@ -185,13 +201,13 @@ export class WebAuthController {
    * GET /reset-password/:token
    * Render reset password page
    */
-  getResetPassword = (req, res) => {
+  getResetPassword = (req: Request, res: Response): void => {
     const { token } = req.params;
 
     renderView(res, 'auth/reset-password', {
       title: 'Reset Password - PatrolManager',
       token,
-      csrfToken: req.csrfToken?.() || '',
+      csrfToken: (req as any).csrfToken?.() || '',
       currentPath: '/reset-password',
     });
   };
@@ -200,7 +216,7 @@ export class WebAuthController {
    * POST /reset-password
    * Handle reset password form submission
    */
-  postResetPassword = async (req, res, next) => {
+  postResetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { token, password } = req.body;
 
@@ -237,7 +253,7 @@ export class WebAuthController {
    * GET /verify-email/:token
    * Verify email address
    */
-  getVerifyEmail = async (req, res, next) => {
+  getVerifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { token } = req.params;
       // TODO: Implement email verification

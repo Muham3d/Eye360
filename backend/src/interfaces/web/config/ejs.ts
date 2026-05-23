@@ -6,21 +6,25 @@
  * @module ejsConfig
  */
 
+import { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+interface EjsOptions {
+  env?: string;
+  rootDir?: string;
+}
+
 /**
  * Configure EJS view engine
  *
- * @param {import('express').Application} app - Express application instance
- * @param {Object} options - Configuration options
- * @param {string} options.env - Environment (development, production, test)
- * @param {string} options.rootDir - Root directory of the project
+ * @param app - Express application instance
+ * @param options - Configuration options
  */
-export function configureEJS(app, options = {}) {
+export function configureEJS(app: Application, options: EjsOptions = {}): { viewsDir: string; viewEngine: string; viewCache: boolean } {
   const {
     env = process.env.NODE_ENV || 'development',
     rootDir = path.resolve(__dirname, '../../../..'),
@@ -43,21 +47,23 @@ export function configureEJS(app, options = {}) {
   });
 
   // Custom EJS locals (available in all templates)
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     // Make current path available for navigation active states
     res.locals.currentPath = req.path;
 
+    const session = req.session as any;
+
     // Make flash messages available
     res.locals.flash = {
-      success: req.session?.flash?.success || null,
-      error: req.session?.flash?.error || null,
-      warning: req.session?.flash?.warning || null,
-      info: req.session?.flash?.info || null,
+      success: session?.flash?.success || null,
+      error: session?.flash?.error || null,
+      warning: session?.flash?.warning || null,
+      info: session?.flash?.info || null,
     };
 
     // Clear flash messages after they're accessed
-    if (req.session?.flash) {
-      req.session.flash = {};
+    if (session?.flash) {
+      session.flash = {};
     }
 
     // Make current user available
@@ -86,40 +92,42 @@ export function configureEJS(app, options = {}) {
 /**
  * Set flash message for next request
  *
- * @param {import('express').Request} req - Express request
- * @param {string} type - Message type (success, error, warning, info)
- * @param {string} message - Message content
+ * @param req - Express request
+ * @param type - Message type (success, error, warning, info)
+ * @param message - Message content
  */
-export function setFlashMessage(req, type, message) {
+export function setFlashMessage(req: Request, type: string, message: string): void {
+  const session = req.session as any;
+
   // Only set flash message if session exists and is properly initialized
   // If session middleware is not configured, flash messages won't work
-  if (!req.session || typeof req.session !== 'object') {
+  if (!session || typeof session !== 'object') {
     // Silently fail if session is not available
     // This prevents crashes when session middleware is misconfigured
     return;
   }
 
-  if (!req.session.flash) {
-    req.session.flash = {};
+  if (!session.flash) {
+    session.flash = {};
   }
 
   // Initialize array if it doesn't exist
-  if (!req.session.flash[type]) {
-    req.session.flash[type] = [];
+  if (!session.flash[type]) {
+    session.flash[type] = [];
   }
 
   // Add message to array
-  req.session.flash[type].push(message);
+  session.flash[type].push(message);
 }
 
 /**
  * Helper function for rendering views with consistent layout
  *
- * @param {import('express').Response} res - Express response
- * @param {string} template - Template name (without .ejs extension)
- * @param {Object} options - View options
+ * @param res - Express response
+ * @param template - Template name (without .ejs extension)
+ * @param options - View options
  */
-export function renderView(res, template, options = {}) {
+export function renderView(res: Response, template: string, options: any = {}): void {
   const defaultOptions = {
     layout: 'layouts/base',
     title: options.title || 'PatrolManager - Admin Panel',

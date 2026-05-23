@@ -9,8 +9,12 @@
 
 import { Router } from 'express';
 import webRealTimeController from '../controllers/WebRealTimeController';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
+router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 /**
  * @route   GET /api/v1/dashboard/sos/active

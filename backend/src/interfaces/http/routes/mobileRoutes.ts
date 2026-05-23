@@ -10,11 +10,13 @@
 import { Router } from 'express';
 import SyncController from '../controllers/SyncController.js';
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
-// All mobile routes require authentication
+// All mobile routes require authentication and tenant scoping
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 /**
  * @route   POST /api/v1/mobile/patrols/sync

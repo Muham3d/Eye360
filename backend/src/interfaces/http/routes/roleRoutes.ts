@@ -11,13 +11,15 @@ import { roleController } from '../controllers/index';
 import { validateRequest } from '../middleware/validationMiddleware';
 import { roleIdParamSchema } from '../validators/index';
 import { authMiddleware, requireRole } from '../middleware/authMiddleware';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
 /**
- * Apply authentication middleware to all routes
+ * Apply authentication and tenant middleware to all routes
  */
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 /**
  * GET /api/roles

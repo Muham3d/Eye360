@@ -10,11 +10,13 @@ import { Router } from 'express';
 import SiteController from '../controllers/SiteController.js';
 import CheckpointController from '../controllers/CheckpointController.js';
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
-// All site routes require authentication and manager/admin role
+// All site routes require authentication, tenant scoping, and manager/admin role
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 router.use(requireRole('admin', 'manager'));
 
 /**

@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
-import { ForbiddenError, AuthenticationError } from '../../../src/core/domain/errors/AppError.js';
-// We will implement the actual middleware in T015/T014, for now we test the logic we want
-import { authorize } from '../../../src/interfaces/http/middleware/AuthMiddleware.js';
+import { ForbiddenError, UnauthorizedError } from '../../../src/core/domain/errors/index.js';
+// Test requireRole middleware from authMiddleware.js
+import { requireRole } from '../../../src/interfaces/http/middleware/authMiddleware.js';
 import { UserRole } from '../../../src/core/domain/entities/Role.js';
 
 describe('AuthMiddleware RBAC Unit Tests', () => {
@@ -20,14 +20,14 @@ describe('AuthMiddleware RBAC Unit Tests', () => {
     });
 
     it('should allow access if user has the required role', () => {
-        const middleware = authorize([UserRole.GUARD, UserRole.ADMIN]);
+        const middleware = requireRole(UserRole.GUARD, UserRole.ADMIN);
         middleware(mockRequest, mockResponse, nextFunction);
         expect(nextFunction).toHaveBeenCalled();
         expect(nextFunction).not.toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should throw ForbiddenError if user does not have the required role', () => {
-        const middleware = authorize([UserRole.ADMIN]);
+        const middleware = requireRole(UserRole.ADMIN);
         try {
             middleware(mockRequest, mockResponse, nextFunction);
         } catch (error) {
@@ -40,10 +40,10 @@ describe('AuthMiddleware RBAC Unit Tests', () => {
         }
     });
 
-    it('should throw AuthenticationError if user is not authenticated', () => {
+    it('should throw UnauthorizedError if user is not authenticated', () => {
         mockRequest.user = undefined;
-        const middleware = authorize([UserRole.ADMIN]);
+        const middleware = requireRole(UserRole.ADMIN);
         middleware(mockRequest, mockResponse, nextFunction);
-        expect(nextFunction).toHaveBeenCalledWith(expect.any(AuthenticationError));
+        expect(nextFunction).toHaveBeenCalledWith(expect.any(UnauthorizedError));
     });
 });

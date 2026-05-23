@@ -5,10 +5,12 @@
 import { Router } from 'express';
 import IncidentController from '../controllers/IncidentController';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 router.post('/', IncidentController.reportIncident);
 router.get('/:id', IncidentController.getIncident);

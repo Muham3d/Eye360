@@ -19,6 +19,7 @@ import {
   logoutSchema,
 } from '../validators/index';
 import { authMiddleware, optionalAuthMiddleware, requireRole } from '../middleware/authMiddleware';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ const router = Router();
 router.post(
   '/register',
   authMiddleware,
+  tenantMiddleware,
   requireRole('Admin'),
   validateRequest(registerSchema),
   authController.register
@@ -93,6 +95,7 @@ router.post(
 router.get(
   '/me',
   authMiddleware,
+  tenantMiddleware,
   authController.getProfile
 );
 
@@ -103,6 +106,7 @@ router.get(
 router.post(
   '/change-password',
   authMiddleware,
+  tenantMiddleware,
   validateRequest(changePasswordSchema),
   authController.changePassword
 );
@@ -114,6 +118,7 @@ router.post(
 router.post(
   '/logout-all',
   authMiddleware,
+  tenantMiddleware,
   authController.logoutAll
 );
 

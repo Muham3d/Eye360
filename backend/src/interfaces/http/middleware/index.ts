@@ -11,6 +11,7 @@ export { validateRequest } from './validationMiddleware.js';
 export { errorHandler } from './errorHandler.js';
 export { notFoundHandler } from './notFoundHandler.js';
 export { securityMiddleware } from './securityMiddleware.js';
+export { tenantMiddleware } from './tenantMiddleware.js';
 
 // Passport Strategies
 export * from './strategies/index.js';

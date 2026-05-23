@@ -7,8 +7,9 @@
  * @module interfaces/http/controllers/WebUserController
  */
 
+import { Request, Response, NextFunction } from 'express';
 import { setFlashMessage, renderView } from '../../web/config/ejs.js';
-import { getUserService } from '@core/services/index.js';
+import { getUserService } from '../../../core/services/index.js';
 
 /**
  * Web User Controller
@@ -18,18 +19,18 @@ export class WebUserController {
    * GET /users
    * Render user list with filters and pagination
    */
-  getIndex = async (req, res, next) => {
+  getIndex = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const search = req.query.search || null;
-      const role = req.query.role || null;
-      const status = req.query.status || null;
-      const sort = req.query.sort || 'createdAt';
-      const order = req.query.order || 'DESC';
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = (req.query.search as string) || null;
+      const role = (req.query.role as string) || null;
+      const status = (req.query.status as string) || null;
+      const sort = (req.query.sort as string) || 'createdAt';
+      const order = (req.query.order as string) || 'DESC';
 
       // Build filters object
-      const filters = {};
+      const filters: Record<string, any> = {};
       if (search) filters.search = search;
       if (role) filters.role = role;
       if (status) filters.status = status;
@@ -75,7 +76,7 @@ export class WebUserController {
    * GET /users/new
    * Render create user form
    */
-  getCreate = async (req, res, next) => {
+  getCreate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userService = getUserService();
       const roles = await userService.getRoles();
@@ -96,12 +97,12 @@ export class WebUserController {
    * POST /users
    * Handle create user form submission
    */
-  postCreate = async (req, res, next) => {
+  postCreate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { firstName, lastName, email, phone, roleId, status, password, confirmPassword } = req.body;
 
       // Basic validation
-      const errors = {};
+      const errors: Record<string, string> = {};
 
       if (!firstName || firstName.trim().length < 2) {
         errors.firstName = 'First name must be at least 2 characters long';
@@ -153,14 +154,13 @@ export class WebUserController {
       });
 
       if (!result.success) {
-        const userService = getUserService();
         const roles = await userService.getRoles();
 
         // Handle service-level errors
         if (result.error?.includes('email')) {
           errors.email = result.error;
         } else {
-          errors.general = result.error;
+          errors.general = result.error || 'Failed to create user';
         }
 
         renderView(res, 'users/form', {
@@ -184,12 +184,12 @@ export class WebUserController {
    * GET /users/:id/edit
    * Render edit user form
    */
-  getEdit = async (req, res, next) => {
+  getEdit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
 
       const userService = getUserService();
-      const result = await userService.getUserById(id);
+      const result = await userService.getUserById(parseInt(id!));
 
       if (!result.success || !result.user) {
         setFlashMessage(req, 'error', 'User not found');
@@ -214,13 +214,13 @@ export class WebUserController {
    * PUT /users/:id
    * Handle update user form submission
    */
-  putUpdate = async (req, res, next) => {
+  putUpdate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const { firstName, lastName, email, phone, roleId, status } = req.body;
 
       // Basic validation
-      const errors = {};
+      const errors: Record<string, string> = {};
 
       if (!firstName || firstName.trim().length < 2) {
         errors.firstName = 'First name must be at least 2 characters long';
@@ -242,7 +242,7 @@ export class WebUserController {
       if (Object.keys(errors).length > 0) {
         const userService = getUserService();
         const [userResult, roles] = await Promise.all([
-          userService.getUserById(id),
+          userService.getUserById(parseInt(id!)),
           userService.getRoles(),
         ]);
 
@@ -258,7 +258,7 @@ export class WebUserController {
 
       // Update user via service
       const userService = getUserService();
-      const result = await userService.updateUser(id, {
+      const result = await userService.updateUser(parseInt(id!), {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
@@ -268,9 +268,8 @@ export class WebUserController {
       });
 
       if (!result.success) {
-        const userService = getUserService();
         const [userResult, roles] = await Promise.all([
-          userService.getUserById(id),
+          userService.getUserById(parseInt(id!)),
           userService.getRoles(),
         ]);
 
@@ -278,7 +277,7 @@ export class WebUserController {
         if (result.error?.includes('email')) {
           errors.email = result.error;
         } else {
-          errors.general = result.error;
+          errors.general = result.error || 'Failed to update user';
         }
 
         renderView(res, 'users/form', {
@@ -308,7 +307,7 @@ export class WebUserController {
    * POST /users/:id/role
    * Handle role change
    */
-  postChangeRole = async (req, res, next) => {
+  postChangeRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const { role } = req.body;
@@ -319,7 +318,7 @@ export class WebUserController {
       }
 
       const userService = getUserService();
-      const result = await userService.changeUserRole(id, role);
+      const result = await userService.changeUserRole(parseInt(id!), role);
 
       if (!result.success) {
         setFlashMessage(req, 'error', result.error || 'Failed to change user role');
@@ -337,7 +336,7 @@ export class WebUserController {
    * POST /users/:id/status
    * Handle status change
    */
-  postChangeStatus = async (req, res, next) => {
+  postChangeStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const { status, reason } = req.body;
@@ -348,7 +347,7 @@ export class WebUserController {
       }
 
       const userService = getUserService();
-      const result = await userService.changeUserStatus(id, status, reason);
+      const result = await userService.changeUserStatus(parseInt(id!), status, reason);
 
       if (!result.success) {
         setFlashMessage(req, 'error', result.error || 'Failed to change user status');
@@ -366,7 +365,7 @@ export class WebUserController {
    * POST /users/:id/delete
    * Handle user deletion
    */
-  postDelete = async (req, res, next) => {
+  postDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const { confirm, confirmDelete, 'confirm-text': confirmText } = req.body;
@@ -378,7 +377,7 @@ export class WebUserController {
       }
 
       const userService = getUserService();
-      const result = await userService.deleteUser(id);
+      const result = await userService.deleteUser(parseInt(id!));
 
       if (!result.success) {
         setFlashMessage(req, 'error', result.error || 'Failed to delete user');
@@ -396,12 +395,12 @@ export class WebUserController {
    * GET /users/:id/reset-password
    * Send password reset email
    */
-  getResetPassword = async (req, res, next) => {
+  getResetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
 
       const userService = getUserService();
-      const result = await userService.sendPasswordResetEmail(id);
+      const result = await userService.sendPasswordResetEmail(parseInt(id!));
 
       if (!result.success) {
         setFlashMessage(req, 'error', result.error || 'Failed to send password reset email');
@@ -419,10 +418,10 @@ export class WebUserController {
    * GET /users/export
    * Export users to CSV
    */
-  getExport = async (req, res, next) => {
+  getExport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userService = getUserService();
-      const result = await userService.exportUsers(req.query);
+      const result = await userService.exportUsers(req.query as any);
 
       if (!result.success) {
         setFlashMessage(req, 'error', result.error || 'Failed to export users');

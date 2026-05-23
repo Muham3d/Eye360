@@ -9,11 +9,13 @@
 import { Router } from 'express';
 import PatrolController from '../controllers/PatrolController';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 const router = Router();
 
-// All patrol routes require authentication
+// All patrol routes require authentication and tenant scoping
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 /**
  * @route   GET /api/v1/patrols/active
