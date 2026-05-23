@@ -42,6 +42,10 @@ export default {
 
   // Module name mapper for path aliases
   moduleNameMapper: {
+    '^@core/(.*)\\.js$': '<rootDir>/src/core/$1',
+    '^@infrastructure/(.*)\\.js$': '<rootDir>/src/infrastructure/$1',
+    '^@interfaces/(.*)\\.js$': '<rootDir>/src/interfaces/$1',
+    '^@/(.*)\\.js$': '<rootDir>/src/$1',
     '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1',
     '^@interfaces/(.*)$': '<rootDir>/src/interfaces/$1',
