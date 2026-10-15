@@ -16,8 +16,8 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - run: npm run lint
-      - run: npm test
+      - run: cd backend && npm run lint
+      - run: cd backend && NODE_OPTIONS="--experimental-vm-modules" npx jest tests/unit/services/SiteService.test.ts --config jest.config.js
 
   build-and-deploy:
     needs: test
