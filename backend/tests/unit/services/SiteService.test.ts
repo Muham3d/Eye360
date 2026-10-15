@@ -215,7 +215,5 @@ describe('SiteService', () => {
       expect(instance).toBeInstanceOf(SiteService);
     });
 
-
-    });
   });
 });
