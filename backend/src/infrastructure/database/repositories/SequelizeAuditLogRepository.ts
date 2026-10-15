@@ -25,15 +25,21 @@ export function setAuditLogModel(model: any): void {
  */
 export class SequelizeAuditLogRepository implements IAuditLogRepository {
   /**
-   * Create a new audit log entry
+   * Get the AuditLog model with initialization check
    */
-  async create(entry: AuditLog): Promise<AuditLog> {
+  private get model(): any {
     if (!AuditLogModel) {
       throw new Error('AuditLogModel not initialized');
     }
+    return AuditLogModel;
+  }
 
+  /**
+   * Create a new audit log entry
+   */
+  async create(entry: AuditLog): Promise<AuditLog> {
     const data = entry.toJSON();
-    const created = await AuditLogModel.create(data);
+    const created = await this.model.create(data);
 
     return this.mapToEntity(created);
   }
@@ -42,11 +48,7 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
    * Find audit log by ID
    */
   async findById(id: number): Promise<AuditLog | null> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
-    const found = await AuditLogModel.findByPk(id);
+    const found = await this.model.findByPk(id);
 
     return found ? this.mapToEntity(found) : null;
   }
@@ -61,17 +63,13 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
     limit: number;
     totalPages: number;
   }> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
     const whereClause = this.buildWhereClause(filters);
 
     const page = filters.page || 1;
     const limit = filters.limit || 20;
     const offset = (page - 1) * limit;
 
-    const { count, rows } = await AuditLogModel.findAndCountAll({
+    const { count, rows } = await this.model.findAndCountAll({
       where: whereClause,
       order: [['timestamp', 'DESC']],
       limit,
@@ -93,11 +91,7 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
    * Find audit logs by user ID
    */
   async findByUserId(userId: number, limit: number = 100): Promise<AuditLog[]> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
-    const rows = await AuditLogModel.findAll({
+    const rows = await this.model.findAll({
       where: { userId },
       order: [['timestamp', 'DESC']],
       limit,
@@ -110,11 +104,7 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
    * Find audit logs by entity
    */
   async findByEntity(entityType: string, entityId: number, limit: number = 100): Promise<AuditLog[]> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
-    const rows = await AuditLogModel.findAll({
+    const rows = await this.model.findAll({
       where: {
         entityType,
         entityId,
@@ -130,22 +120,18 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
    * Get audit log summary statistics
    */
   async getSummary(filters: Omit<IAuditLogFilters, 'page' | 'limit'>): Promise<IAuditLogSummary> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
     const whereClause = this.buildWhereClause(filters);
 
     // Count total, successful, and failed actions
     const [totalActions, successfulActions, failedActions, criticalActions] = await Promise.all([
-      AuditLogModel.count({ where: whereClause }),
-      AuditLogModel.count({ where: { ...whereClause, result: 'SUCCESS' } }),
-      AuditLogModel.count({ where: { ...whereClause, result: 'FAILURE' } }),
-      AuditLogModel.count({ where: { ...whereClause, severity: 'CRITICAL' } }),
+      this.model.count({ where: whereClause }),
+      this.model.count({ where: { ...whereClause, result: 'SUCCESS' } }),
+      this.model.count({ where: { ...whereClause, result: 'FAILURE' } }),
+      this.model.count({ where: { ...whereClause, severity: 'CRITICAL' } }),
     ]);
 
     // Get top actions
-    const topActionsResult = await AuditLogModel.findAll({
+    const topActionsResult = await this.model.findAll({
       attributes: [
         'action',
         [fn('COUNT', col('id')), 'count'],
@@ -163,7 +149,7 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
     }));
 
     // Get top users
-    const topUsersResult = await AuditLogModel.findAll({
+    const topUsersResult = await this.model.findAll({
       attributes: [
         'userId',
         'userName',
@@ -196,11 +182,7 @@ export class SequelizeAuditLogRepository implements IAuditLogRepository {
    * Delete audit logs older than specified date
    */
   async deleteOlderThan(date: Date): Promise<number> {
-    if (!AuditLogModel) {
-      throw new Error('AuditLogModel not initialized');
-    }
-
-    const result = await AuditLogModel.destroy({
+    const result = await this.model.destroy({
       where: {
         timestamp: {
           [Op.lt]: date,
