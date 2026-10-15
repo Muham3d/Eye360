@@ -255,3 +255,90 @@ export function createPermissions(): any[] {
     createPermissionFactory({ id: 10, name: 'sites.manage', resource: 'sites', action: 'manage' }),
   ];
 }
+
+/**
+ * Site factory
+ */
+export function createSiteFactory(overrides: Partial<any> = {}) {
+  return {
+    id: 1,
+    name: 'Test Site',
+    description: 'A test site',
+    address: '123 Test St',
+    geofenceBoundary: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-122.42, 37.77],
+          [-122.40, 37.77],
+          [-122.40, 37.79],
+          [-122.42, 37.79],
+          [-122.42, 37.77],
+        ],
+      ],
+    },
+    geofenceBuffer: 10,
+    timezone: 'America/Los_Angeles',
+    status: 'active',
+    createdById: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+/**
+ * Site creation DTO factory
+ */
+export function createSiteDTOFactory(overrides: Partial<any> = {}) {
+  return {
+    name: 'New Test Site',
+    description: 'New test site description',
+    address: '456 New St',
+    geofenceBoundary: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-122.42, 37.77],
+          [-122.40, 37.77],
+          [-122.40, 37.79],
+          [-122.42, 37.79],
+          [-122.42, 37.77],
+        ],
+      ],
+    },
+    geofenceBuffer: 10,
+    timezone: 'America/Los_Angeles',
+    status: 'active',
+    createdById: 1,
+    ...overrides,
+  };
+}
+
+/**
+ * Site update DTO factory
+ */
+export function updateSiteDTOFactory(overrides: Partial<any> = {}) {
+  return {
+    name: 'Updated Test Site',
+    description: 'Updated test site description',
+    ...overrides,
+  };
+}
+
+/**
+ * Site statistics factory
+ */
+export function createSiteStatisticsFactory(overrides: Partial<any> = {}) {
+  return {
+    siteId: 1,
+    checkpointCount: 5,
+    activeTemplateCount: 2,
+    activeGuardCount: 3,
+    totalPatrolsToday: 10,
+    completedPatrolsToday: 8,
+    missedPatrolsToday: 2,
+    averageCompletionTime: 45,
+    ...overrides,
+  };
+}

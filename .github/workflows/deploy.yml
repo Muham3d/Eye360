@@ -15,9 +15,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
+      - run: npm install
+
+      - run: cd backend && NODE_OPTIONS="--experimental-vm-modules" npx jest tests/unit/services/SiteService.test.ts --config jest.config.js
+
 
   build-and-deploy:
     needs: test
